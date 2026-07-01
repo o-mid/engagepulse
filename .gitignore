@@ -1,0 +1,25 @@
+# Binaries
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+/engagepulse
+/loadgen
+
+# Dependencies
+vendor/
+
+# Environment
+.env
+.env.local
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Coverage
+coverage.out
+coverage.html
