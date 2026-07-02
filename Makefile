@@ -1,4 +1,4 @@
-.PHONY: build run fmt vet test
+.PHONY: build run fmt vet test up down logs
 
 build:
 	go build -o bin/engagepulse ./cmd/engagepulse
@@ -14,3 +14,12 @@ vet:
 
 test:
 	go test ./...
+
+up:
+	docker compose up -d
+
+down:
+	docker compose down
+
+logs:
+	docker compose logs -f
