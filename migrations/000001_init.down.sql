@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS ledger_entries;
+DROP TABLE IF EXISTS balances;
+DROP TABLE IF EXISTS player_state;
+DROP TABLE IF EXISTS processed_events;
+DROP TABLE IF EXISTS players;
+DROP TABLE IF EXISTS tenants;

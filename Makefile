@@ -1,4 +1,4 @@
-.PHONY: build run fmt vet test up down logs
+.PHONY: build run fmt vet test up down logs migrate
 
 build:
 	go build -o bin/engagepulse ./cmd/engagepulse
@@ -23,3 +23,6 @@ down:
 
 logs:
 	docker compose logs -f
+
+migrate:
+	go run ./cmd/engagepulse -migrate-only
