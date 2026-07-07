@@ -1,4 +1,4 @@
-.PHONY: build run fmt vet test up down logs migrate
+.PHONY: build run fmt vet test up down logs migrate seed
 
 build:
 	go build -o bin/engagepulse ./cmd/engagepulse
@@ -26,3 +26,6 @@ logs:
 
 migrate:
 	go run ./cmd/engagepulse -migrate-only
+
+seed: migrate
+	@echo "seed data applied via migrations"
