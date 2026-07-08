@@ -47,7 +47,9 @@ func (a *App) Run(ctx context.Context) error {
 		return fmt.Errorf("migrate: %w", err)
 	}
 
-	pub := kafka.NewMemoryPublisher(1024)
+	pub := kafka.NewProducer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic)
+	defer func() { _ = pub.Close() }()
+
 	api := httpapi.New(a.store, pub, a.logger)
 	srv := &http.Server{
 		Addr:              a.cfg.HTTPAddr,
