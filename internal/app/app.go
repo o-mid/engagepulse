@@ -2,11 +2,16 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"time"
 
+	"github.com/o-mid/engagepulse/internal/api/httpapi"
 	"github.com/o-mid/engagepulse/internal/config"
+	"github.com/o-mid/engagepulse/internal/kafka"
 	"github.com/o-mid/engagepulse/internal/store"
 )
 
@@ -42,13 +47,37 @@ func (a *App) Run(ctx context.Context) error {
 		return fmt.Errorf("migrate: %w", err)
 	}
 
+	pub := kafka.NewMemoryPublisher(1024)
+	api := httpapi.New(a.store, pub, a.logger)
+	srv := &http.Server{
+		Addr:              a.cfg.HTTPAddr,
+		Handler:           api.Handler(),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		a.logger.Info("http listening", "addr", a.cfg.HTTPAddr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+	}()
+
 	a.logger.Info("engagepulse ready",
 		"http_addr", a.cfg.HTTPAddr,
 		"grpc_addr", a.cfg.GRPCAddr,
 		"kafka_topic", a.cfg.KafkaTopic,
 	)
-	<-ctx.Done()
-	return fmt.Errorf("shutdown: %w", ctx.Err())
+
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), a.cfg.ShutdownTTL)
+		defer cancel()
+		_ = srv.Shutdown(shutdownCtx)
+		return fmt.Errorf("shutdown: %w", ctx.Err())
+	case err := <-errCh:
+		return err
+	}
 }
 
 func (a *App) Logger() *slog.Logger {
