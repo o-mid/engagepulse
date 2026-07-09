@@ -13,6 +13,7 @@ import (
 	"github.com/o-mid/engagepulse/internal/config"
 	"github.com/o-mid/engagepulse/internal/kafka"
 	"github.com/o-mid/engagepulse/internal/store"
+	"github.com/o-mid/engagepulse/internal/worker"
 )
 
 type App struct {
@@ -50,6 +51,10 @@ func (a *App) Run(ctx context.Context) error {
 	pub := kafka.NewProducer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic)
 	defer func() { _ = pub.Close() }()
 
+	w := worker.New(a.store, a.logger)
+	consumer := kafka.NewConsumer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic, "engagepulse-workers", a.logger, w.Handle)
+	defer func() { _ = consumer.Close() }()
+
 	api := httpapi.New(a.store, pub, a.logger)
 	srv := &http.Server{
 		Addr:              a.cfg.HTTPAddr,
@@ -57,10 +62,15 @@ func (a *App) Run(ctx context.Context) error {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	errCh := make(chan error, 1)
+	errCh := make(chan error, 2)
 	go func() {
 		a.logger.Info("http listening", "addr", a.cfg.HTTPAddr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+	}()
+	go func() {
+		if err := consumer.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			errCh <- err
 		}
 	}()
