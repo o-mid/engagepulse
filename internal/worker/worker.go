@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/o-mid/engagepulse/internal/domain"
 	"github.com/o-mid/engagepulse/internal/rules"
@@ -25,7 +26,7 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 		return err
 	}
 
-	err := w.store.MarkProcessed(ctx, evt.TenantID, evt.EventID, evt.Type)
+	err := w.store.MarkProcessed(ctx, evt.TenantID, evt.PlayerID, evt.EventID, evt.Type)
 	if errors.Is(err, store.ErrDuplicateEvent) {
 		w.logger.Info("skip duplicate event", "event_id", evt.EventID, "tenant_id", evt.TenantID)
 		return nil
@@ -39,7 +40,16 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 		return err
 	}
 
-	res := w.rules.ApplyWelcome(evt, st)
+	recentBets, err := w.store.CountPlayerEventsSince(ctx, evt.TenantID, evt.PlayerID, domain.EventBetPlaced, time.Now().UTC().Add(-1*time.Minute))
+	if err != nil {
+		return err
+	}
+	// MarkProcessed already inserted this bet; subtract it for pre-event window count.
+	if evt.Type == domain.EventBetPlaced && recentBets > 0 {
+		recentBets--
+	}
+
+	res := w.rules.Apply(evt, st, recentBets)
 	if err := w.store.SavePlayerState(ctx, res.State); err != nil {
 		return err
 	}

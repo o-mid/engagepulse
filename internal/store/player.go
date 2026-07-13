@@ -74,19 +74,3 @@ func (s *Store) SavePlayerState(ctx context.Context, st PlayerState) error {
 	`, st.TenantID, st.PlayerID, st.Score, st.VIPTier, st.OfferTags, st.IntegrityFlag)
 	return err
 }
-
-func (s *Store) CountEventsByTypeSince(ctx context.Context, tenantID, playerID, eventType string, since time.Time) (int64, error) {
-	var n int64
-	err := s.pool.QueryRow(ctx, `
-		SELECT COUNT(*)
-		FROM processed_events pe
-		WHERE pe.tenant_id=$1
-		  AND pe.event_type=$2
-		  AND pe.processed_at >= $3
-		  AND EXISTS (
-			SELECT 1 FROM players p
-			WHERE p.tenant_id=pe.tenant_id AND p.player_id=$4
-		  )
-	`, tenantID, eventType, since, playerID).Scan(&n)
-	return n, err
-}
