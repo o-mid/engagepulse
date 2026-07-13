@@ -6,16 +6,18 @@ import (
 	"log/slog"
 
 	"github.com/o-mid/engagepulse/internal/domain"
+	"github.com/o-mid/engagepulse/internal/rules"
 	"github.com/o-mid/engagepulse/internal/store"
 )
 
 type Worker struct {
 	store  *store.Store
+	rules  *rules.Engine
 	logger *slog.Logger
 }
 
 func New(st *store.Store, logger *slog.Logger) *Worker {
-	return &Worker{store: st, logger: logger}
+	return &Worker{store: st, rules: rules.New(), logger: logger}
 }
 
 func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
@@ -32,11 +34,22 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 		return err
 	}
 
+	st, err := w.store.GetPlayerState(ctx, evt.TenantID, evt.PlayerID)
+	if err != nil {
+		return err
+	}
+
+	res := w.rules.ApplyWelcome(evt, st)
+	if err := w.store.SavePlayerState(ctx, res.State); err != nil {
+		return err
+	}
+
 	w.logger.Info("event processed",
 		"event_id", evt.EventID,
 		"tenant_id", evt.TenantID,
 		"player_id", evt.PlayerID,
 		"type", evt.Type,
+		"rule_hits", res.RuleHits,
 	)
 	return nil
 }
