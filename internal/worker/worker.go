@@ -7,18 +7,25 @@ import (
 	"time"
 
 	"github.com/o-mid/engagepulse/internal/domain"
+	"github.com/o-mid/engagepulse/internal/ledger"
 	"github.com/o-mid/engagepulse/internal/rules"
 	"github.com/o-mid/engagepulse/internal/store"
 )
 
 type Worker struct {
 	store  *store.Store
+	ledger *ledger.Ledger
 	rules  *rules.Engine
 	logger *slog.Logger
 }
 
 func New(st *store.Store, logger *slog.Logger) *Worker {
-	return &Worker{store: st, rules: rules.New(), logger: logger}
+	return &Worker{
+		store:  st,
+		ledger: ledger.New(st.Pool()),
+		rules:  rules.New(),
+		logger: logger,
+	}
 }
 
 func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
@@ -44,7 +51,6 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 	if err != nil {
 		return err
 	}
-	// MarkProcessed already inserted this bet; subtract it for pre-event window count.
 	if evt.Type == domain.EventBetPlaced && recentBets > 0 {
 		recentBets--
 	}
@@ -54,12 +60,22 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 		return err
 	}
 
+	if res.CreditAmount > 0 {
+		err := w.ledger.Credit(ctx, evt.TenantID, evt.PlayerID, evt.EventID, res.CreditReason, res.CreditAmount)
+		if errors.Is(err, ledger.ErrDuplicateCredit) {
+			w.logger.Info("skip duplicate credit", "event_id", evt.EventID)
+		} else if err != nil {
+			return err
+		}
+	}
+
 	w.logger.Info("event processed",
 		"event_id", evt.EventID,
 		"tenant_id", evt.TenantID,
 		"player_id", evt.PlayerID,
 		"type", evt.Type,
 		"rule_hits", res.RuleHits,
+		"credit", res.CreditAmount,
 	)
 	return nil
 }
