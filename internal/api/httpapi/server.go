@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -28,6 +29,7 @@ func New(st *store.Store, pub EventPublisher, logger *slog.Logger) *Server {
 	s := &Server{store: st, pub: pub, logger: logger, mux: http.NewServeMux()}
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.HandleFunc("POST /v1/events", s.handleIngest)
+	s.mux.HandleFunc("GET /v1/players/{id}", s.handleGetPlayer)
 	return s
 }
 
@@ -90,4 +92,25 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		"status":   "accepted",
 		"event_id": evt.EventID,
 	})
+}
+
+func (s *Server) handleGetPlayer(w http.ResponseWriter, r *http.Request) {
+	tenantID := r.Header.Get("X-Tenant-ID")
+	playerID := r.PathValue("id")
+	if tenantID == "" || playerID == "" {
+		http.Error(w, "tenant and player required", http.StatusBadRequest)
+		return
+	}
+	snap, err := s.store.GetPlayerSnapshot(r.Context(), tenantID, playerID)
+	if errors.Is(err, store.ErrNotFound) {
+		http.Error(w, "player not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		s.logger.Error("get player", "err", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(snap)
 }

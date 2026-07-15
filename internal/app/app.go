@@ -5,10 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"time"
 
+	"google.golang.org/grpc"
+
+	engagepulsev1 "github.com/o-mid/engagepulse/internal/api/gen/engagepulse/v1"
+	"github.com/o-mid/engagepulse/internal/api/grpcapi"
 	"github.com/o-mid/engagepulse/internal/api/httpapi"
 	"github.com/o-mid/engagepulse/internal/config"
 	"github.com/o-mid/engagepulse/internal/kafka"
@@ -62,10 +67,23 @@ func (a *App) Run(ctx context.Context) error {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	errCh := make(chan error, 2)
+	grpcSrv := grpc.NewServer()
+	engagepulsev1.RegisterPlayerServiceServer(grpcSrv, grpcapi.New(a.store))
+	lis, err := net.Listen("tcp", a.cfg.GRPCAddr)
+	if err != nil {
+		return fmt.Errorf("listen grpc: %w", err)
+	}
+
+	errCh := make(chan error, 3)
 	go func() {
 		a.logger.Info("http listening", "addr", a.cfg.HTTPAddr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+	}()
+	go func() {
+		a.logger.Info("grpc listening", "addr", a.cfg.GRPCAddr)
+		if err := grpcSrv.Serve(lis); err != nil {
 			errCh <- err
 		}
 	}()
@@ -86,6 +104,7 @@ func (a *App) Run(ctx context.Context) error {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), a.cfg.ShutdownTTL)
 		defer cancel()
 		_ = srv.Shutdown(shutdownCtx)
+		grpcSrv.GracefulStop()
 		return fmt.Errorf("shutdown: %w", ctx.Err())
 	case err := <-errCh:
 		return err

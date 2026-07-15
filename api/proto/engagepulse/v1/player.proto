@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package engagepulse.v1;
+
+option go_package = "github.com/o-mid/engagepulse/internal/api/gen/engagepulse/v1;engagepulsev1";
+
+service PlayerService {
+  rpc GetPlayer(GetPlayerRequest) returns (GetPlayerResponse);
+}
+
+message GetPlayerRequest {
+  string tenant_id = 1;
+  string player_id = 2;
+}
+
+message GetPlayerResponse {
+  string tenant_id = 1;
+  string player_id = 2;
+  int64 score = 3;
+  string vip_tier = 4;
+  repeated string offer_tags = 5;
+  string integrity_flag = 6;
+  int64 balance = 7;
+}
