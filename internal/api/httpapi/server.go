@@ -29,7 +29,7 @@ func New(st *store.Store, pub EventPublisher, logger *slog.Logger) *Server {
 	s := &Server{store: st, pub: pub, logger: logger, mux: http.NewServeMux()}
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.HandleFunc("POST /v1/events", s.handleIngest)
-	s.mux.HandleFunc("GET /v1/players/{id}", s.handleGetPlayer)
+	s.mux.HandleFunc("GET /v1/players/{id}", s.requireAPIKey(s.handleGetPlayer))
 	return s
 }
 
@@ -95,13 +95,17 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetPlayer(w http.ResponseWriter, r *http.Request) {
-	tenantID := r.Header.Get("X-Tenant-ID")
-	playerID := r.PathValue("id")
-	if tenantID == "" || playerID == "" {
-		http.Error(w, "tenant and player required", http.StatusBadRequest)
+	tenant, ok := TenantFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	snap, err := s.store.GetPlayerSnapshot(r.Context(), tenantID, playerID)
+	playerID := r.PathValue("id")
+	if playerID == "" {
+		http.Error(w, "player required", http.StatusBadRequest)
+		return
+	}
+	snap, err := s.store.GetPlayerSnapshot(r.Context(), tenant.ID, playerID)
 	if errors.Is(err, store.ErrNotFound) {
 		http.Error(w, "player not found", http.StatusNotFound)
 		return

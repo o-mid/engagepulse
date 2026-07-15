@@ -21,10 +21,16 @@ func New(st *store.Store) *Server {
 }
 
 func (s *Server) GetPlayer(ctx context.Context, req *engagepulsev1.GetPlayerRequest) (*engagepulsev1.GetPlayerResponse, error) {
-	if req.GetTenantId() == "" || req.GetPlayerId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "tenant_id and player_id are required")
+	tenant, ok := TenantFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "unauthorized")
 	}
-	snap, err := s.store.GetPlayerSnapshot(ctx, req.GetTenantId(), req.GetPlayerId())
+	playerID := req.GetPlayerId()
+	if playerID == "" {
+		return nil, status.Error(codes.InvalidArgument, "player_id is required")
+	}
+	// Prefer authenticated tenant; ignore mismatched request tenant_id.
+	snap, err := s.store.GetPlayerSnapshot(ctx, tenant.ID, playerID)
 	if errors.Is(err, store.ErrNotFound) {
 		return nil, status.Error(codes.NotFound, "player not found")
 	}

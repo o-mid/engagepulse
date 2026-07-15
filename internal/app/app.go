@@ -67,7 +67,7 @@ func (a *App) Run(ctx context.Context) error {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	grpcSrv := grpc.NewServer()
+	grpcSrv := grpc.NewServer(grpc.UnaryInterceptor(grpcapi.APIKeyUnaryInterceptor(a.store)))
 	engagepulsev1.RegisterPlayerServiceServer(grpcSrv, grpcapi.New(a.store))
 	lis, err := net.Listen("tcp", a.cfg.GRPCAddr)
 	if err != nil {
