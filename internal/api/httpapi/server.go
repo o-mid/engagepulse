@@ -64,13 +64,18 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 
 	tenant, err := s.store.GetTenant(r.Context(), evt.TenantID)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "unknown tenant")
+		// Same status as bad HMAC so callers cannot probe tenant IDs cheaply.
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	sig := r.Header.Get("X-Signature")
+	if sig == "" {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	if err := ingest.Verify(tenant.HMACSecret, sig, body); err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid signature")
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
