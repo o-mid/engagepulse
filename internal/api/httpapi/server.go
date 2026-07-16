@@ -45,17 +45,17 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil {
-		http.Error(w, "read body", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "read body failed")
 		return
 	}
 
 	var evt domain.Event
 	if err := json.Unmarshal(body, &evt); err != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
-	if evt.EventID == "" || evt.TenantID == "" || evt.PlayerID == "" || evt.Type == "" {
-		http.Error(w, "missing required fields", http.StatusBadRequest)
+	if err := ingest.ValidateEvent(evt); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if evt.OccurredAt.IsZero() {
@@ -64,25 +64,25 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 
 	tenant, err := s.store.GetTenant(r.Context(), evt.TenantID)
 	if err != nil {
-		http.Error(w, "unknown tenant", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unknown tenant")
 		return
 	}
 
 	sig := r.Header.Get("X-Signature")
 	if err := ingest.Verify(tenant.HMACSecret, sig, body); err != nil {
-		http.Error(w, "invalid signature", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "invalid signature")
 		return
 	}
 
 	if err := s.store.EnsurePlayer(r.Context(), evt.TenantID, evt.PlayerID); err != nil {
 		s.logger.Error("ensure player", "err", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
 	if err := s.pub.Publish(r.Context(), evt); err != nil {
 		s.logger.Error("publish event", "err", err)
-		http.Error(w, "publish failed", http.StatusBadGateway)
+		writeError(w, http.StatusBadGateway, "publish failed")
 		return
 	}
 
