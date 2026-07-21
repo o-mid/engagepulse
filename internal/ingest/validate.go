@@ -8,14 +8,14 @@ import (
 )
 
 func ValidateEvent(evt domain.Event) error {
-	if strings.TrimSpace(evt.EventID) == "" {
-		return fmt.Errorf("event_id is required")
+	if err := requireNonEmpty("event_id", evt.EventID); err != nil {
+		return err
 	}
-	if strings.TrimSpace(evt.TenantID) == "" {
-		return fmt.Errorf("tenant_id is required")
+	if err := requireNonEmpty("tenant_id", evt.TenantID); err != nil {
+		return err
 	}
-	if strings.TrimSpace(evt.PlayerID) == "" {
-		return fmt.Errorf("player_id is required")
+	if err := requireNonEmpty("player_id", evt.PlayerID); err != nil {
+		return err
 	}
 	switch evt.Type {
 	case domain.EventDeposit, domain.EventBetPlaced, domain.EventSessionHeartbeat:
@@ -26,6 +26,13 @@ func ValidateEvent(evt domain.Event) error {
 		if evt.Amount <= 0 {
 			return fmt.Errorf("amount must be positive for %s", evt.Type)
 		}
+	}
+	return nil
+}
+
+func requireNonEmpty(field, value string) error {
+	if strings.TrimSpace(value) == "" {
+		return fmt.Errorf("%s is required", field)
 	}
 	return nil
 }

@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"slices"
-
 	"github.com/o-mid/engagepulse/internal/domain"
 	"github.com/o-mid/engagepulse/internal/store"
 )
@@ -36,10 +34,10 @@ func (e *Engine) ApplyWelcome(evt domain.Event, st store.PlayerState) Result {
 	if evt.Type != domain.EventDeposit {
 		return res
 	}
-	if slices.Contains(st.OfferTags, domain.OfferWelcomeBonus) {
+	if hasOffer(st.OfferTags, domain.OfferWelcomeBonus) {
 		return res
 	}
-	st.OfferTags = append(append([]string{}, st.OfferTags...), domain.OfferWelcomeBonus)
+	st.OfferTags = withOffer(st.OfferTags, domain.OfferWelcomeBonus)
 	res.State = st
 	res.CreditAmount = 100
 	res.CreditReason = "welcome_offer"
