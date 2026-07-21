@@ -11,6 +11,7 @@ import (
 
 	"github.com/o-mid/engagepulse/internal/domain"
 	"github.com/o-mid/engagepulse/internal/ingest"
+	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/store"
 )
 
@@ -28,6 +29,7 @@ type Server struct {
 func New(st *store.Store, pub EventPublisher, logger *slog.Logger) *Server {
 	s := &Server{store: st, pub: pub, logger: logger, mux: http.NewServeMux()}
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
+	s.mux.Handle("GET /metrics", metrics.Handler())
 	s.mux.HandleFunc("POST /v1/events", s.handleIngest)
 	s.mux.HandleFunc("GET /v1/players/{id}", s.requireAPIKey(s.handleGetPlayer))
 	return s
@@ -91,6 +93,7 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	metrics.EventsIngested.Inc()
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	_ = json.NewEncoder(w).Encode(map[string]string{

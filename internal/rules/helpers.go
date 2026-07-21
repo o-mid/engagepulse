@@ -17,7 +17,3 @@ func withOffer(tags []string, offer string) []string {
 	out := append([]string{}, tags...)
 	return append(out, offer)
 }
-
-func isMoneyEvent(eventType string) bool {
-	return eventType == domain.EventDeposit || eventType == domain.EventBetPlaced
-}

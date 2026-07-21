@@ -8,6 +8,7 @@ import (
 
 	"github.com/o-mid/engagepulse/internal/domain"
 	"github.com/o-mid/engagepulse/internal/ledger"
+	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/rules"
 	"github.com/o-mid/engagepulse/internal/store"
 )
@@ -66,8 +67,15 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 			w.logger.Info("skip duplicate credit", "event_id", evt.EventID)
 		} else if err != nil {
 			return err
+		} else {
+			metrics.LedgerCredits.Inc()
 		}
 	}
+
+	for _, hit := range res.RuleHits {
+		metrics.RuleHits.WithLabelValues(hit).Inc()
+	}
+	metrics.EventsProcessed.Inc()
 
 	w.logger.Info("event processed",
 		"event_id", evt.EventID,
