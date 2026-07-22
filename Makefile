@@ -1,7 +1,8 @@
-.PHONY: build run fmt vet test up down logs migrate seed
+.PHONY: build run fmt vet test up down logs migrate seed loadgen demo
 
 build:
 	go build -o bin/engagepulse ./cmd/engagepulse
+	go build -o bin/loadgen ./cmd/loadgen
 
 run:
 	go run ./cmd/engagepulse
@@ -29,3 +30,9 @@ migrate:
 
 seed: migrate
 	@echo "seed data applied via migrations"
+
+loadgen:
+	go run ./cmd/loadgen -n 8
+
+demo:
+	bash ./scripts/demo.sh

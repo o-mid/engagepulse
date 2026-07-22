@@ -1,10 +1,6 @@
 package rules
 
-import (
-	"slices"
-
-	"github.com/o-mid/engagepulse/internal/domain"
-)
+import "slices"
 
 func hasOffer(tags []string, offer string) bool {
 	return slices.Contains(tags, offer)
