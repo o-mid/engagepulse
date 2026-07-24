@@ -23,14 +23,16 @@ type Consumer struct {
 	reader      *kafkago.Reader
 	logger      *slog.Logger
 	handler     EventHandler
+	dlq         DLQPublisher
 	maxAttempts int
 	backoff     time.Duration
 }
 
-func NewConsumer(brokers []string, topic, group string, logger *slog.Logger, handler EventHandler) *Consumer {
+func NewConsumer(brokers []string, topic, group string, logger *slog.Logger, handler EventHandler, dlq DLQPublisher) *Consumer {
 	return &Consumer{
 		logger:      logger,
 		handler:     handler,
+		dlq:         dlq,
 		maxAttempts: defaultMaxAttempts,
 		backoff:     defaultBackoff,
 		reader: kafkago.NewReader(kafkago.ReaderConfig{
@@ -59,6 +61,9 @@ func (c *Consumer) Run(ctx context.Context) error {
 		var evt domain.Event
 		if err := json.Unmarshal(msg.Value, &evt); err != nil {
 			c.logger.Error("unmarshal event", "err", err)
+			if c.dlq != nil {
+				_ = c.dlq.PublishDLQ(ctx, domain.Event{EventID: "unmarshal"}, err.Error(), 1)
+			}
 			if err := c.reader.CommitMessages(ctx, msg); err != nil {
 				return fmt.Errorf("commit poison message: %w", err)
 			}
@@ -67,6 +72,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 
 		if err := c.processEvent(ctx, evt); err != nil {
 			c.logger.Error("process event", "event_id", evt.EventID, "err", err)
+			// Do not commit: leave message for redelivery if DLQ itself failed.
 			continue
 		}
 
@@ -76,6 +82,8 @@ func (c *Consumer) Run(ctx context.Context) error {
 	}
 }
 
+// processEvent retries the handler, then routes exhausted failures to the DLQ.
+// Returns nil only when the message is safe to commit (success or DLQ ack).
 func (c *Consumer) processEvent(ctx context.Context, evt domain.Event) error {
 	var lastErr error
 	attempts := c.maxAttempts
@@ -98,7 +106,16 @@ func (c *Consumer) processEvent(ctx context.Context, evt domain.Event) error {
 			}
 		}
 	}
-	return fmt.Errorf("handler failed after %d attempts: %w", attempts, lastErr)
+
+	if c.dlq == nil {
+		return fmt.Errorf("handler failed and no dlq configured: %w", lastErr)
+	}
+	if err := c.dlq.PublishDLQ(ctx, evt, lastErr.Error(), attempts); err != nil {
+		return fmt.Errorf("publish dlq: %w", err)
+	}
+	metrics.ConsumerDLQ.Inc()
+	c.logger.Info("routed event to dlq", "event_id", evt.EventID, "attempts", attempts)
+	return nil
 }
 
 func (c *Consumer) Close() error {

@@ -57,10 +57,13 @@ func (a *App) Run(ctx context.Context) error {
 	pub := kafka.NewProducer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic)
 	defer func() { _ = pub.Close() }()
 
+	dlq := kafka.NewProducer(a.cfg.KafkaBrokers, a.cfg.KafkaDLQTopic)
+	defer func() { _ = dlq.Close() }()
+
 	outboxPub := outbox.NewPublisher(a.store, pub, a.logger)
 
 	w := worker.New(a.store, a.logger)
-	consumer := kafka.NewConsumer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic, "engagepulse-workers", a.logger, w.Handle)
+	consumer := kafka.NewConsumer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic, "engagepulse-workers", a.logger, w.Handle, dlq)
 	defer func() { _ = consumer.Close() }()
 
 	api := httpapi.New(a.store, a.store, a.logger)
@@ -105,6 +108,7 @@ func (a *App) Run(ctx context.Context) error {
 		"http_addr", a.cfg.HTTPAddr,
 		"grpc_addr", a.cfg.GRPCAddr,
 		"kafka_topic", a.cfg.KafkaTopic,
+		"kafka_dlq_topic", a.cfg.KafkaDLQTopic,
 	)
 
 	select {
