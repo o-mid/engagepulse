@@ -4,27 +4,65 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-API_URL="${API_URL:-http://localhost:8080}"
-# Prefer IPv4 if localhost resolves to ::1 and the server bound to 127.0.0.1
-if [[ "$API_URL" == "http://localhost:8080" ]]; then
-  if ! curl -sf --max-time 1 "$API_URL/healthz" >/dev/null 2>&1; then
-    if curl -sf --max-time 1 "http://127.0.0.1:8080/healthz" >/dev/null 2>&1; then
-      API_URL="http://127.0.0.1:8080"
-    fi
-  fi
-fi
+# Prefer 127.0.0.1 so we match the default server bind (avoids [::1] refused).
+API_URL="${API_URL:-http://127.0.0.1:8080}"
+DEMO_WAIT_SECONDS="${DEMO_WAIT_SECONDS:-60}"
 
 ACME_KEY="${ACME_KEY:-ak_acme_dev_001}"
 NOVA_KEY="${NOVA_KEY:-ak_nova_dev_001}"
 ACME_SECRET="${ACME_SECRET:-hmac_acme_dev_secret}"
 NOVA_SECRET="${NOVA_SECRET:-hmac_nova_dev_secret}"
 
+# Read one Prometheus counter/gauge value (last field on the matching line).
+metric_value() {
+  local name="$1"
+  local line
+  line="$(curl -sf "$API_URL/metrics" | rg "^${name} " || true)"
+  if [[ -z "$line" ]]; then
+    echo "0"
+    return
+  fi
+  awk '{print $NF}' <<<"$line" | head -1 | cut -d. -f1
+}
+
+# Wait until outbox backlog is empty and processed count has caught ingested.
+wait_for_catch_up() {
+  local deadline=$(( $(date +%s) + DEMO_WAIT_SECONDS ))
+  local ingested processed pending
+  echo "==> 4) Wait until outbox is empty and worker catches up"
+  echo "    We poll /metrics (not a fixed sleep). Timeout: ${DEMO_WAIT_SECONDS}s."
+  echo
+  while true; do
+    ingested="$(metric_value engagepulse_events_ingested_total)"
+    processed="$(metric_value engagepulse_events_processed_total)"
+    pending="$(metric_value engagepulse_outbox_pending)"
+
+    if [[ "$ingested" -gt 0 && "$pending" -eq 0 && "$processed" -ge "$ingested" ]]; then
+      echo "    Caught up: ingested=$ingested processed=$processed outbox_pending=$pending"
+      echo
+      return 0
+    fi
+
+    if (( $(date +%s) >= deadline )); then
+      echo "ERROR: timed out waiting for catch-up after ${DEMO_WAIT_SECONDS}s"
+      echo "  ingested=$ingested processed=$processed outbox_pending=$pending"
+      echo "  Check that make run is still up and Redpanda is healthy."
+      exit 1
+    fi
+
+    if [[ "$processed" -lt "$ingested" || "$pending" -gt 0 ]]; then
+      echo "    still catching up… ingested=$ingested processed=$processed outbox_pending=$pending"
+    fi
+    sleep 1
+  done
+}
+
 echo "============================================================"
 echo " EngagePulse demo"
 echo "============================================================"
 echo
 echo "This walk-through sends fake player actions for two brands,"
-echo "waits for the worker, then prints each player's result."
+echo "waits until the outbox and worker catch up, then prints results."
 echo
 echo "API: $API_URL"
 echo
@@ -60,11 +98,7 @@ echo
 go run ./cmd/loadgen -url "$API_URL" -tenant nova-sports -secret "$NOVA_SECRET" -mode velocity -n 8
 echo
 
-echo "==> 4) Wait for outbox publish + worker rules (8s)"
-echo "    Events are saved first, then pushed to the stream, then rules run."
-echo "    Waiting a bit longer so the background jobs can catch up."
-sleep 8
-echo
+wait_for_catch_up
 
 echo "==> 5) Read acme player snapshot"
 echo "    GET /v1/players/load-acme-casino-0  (API key for acme-casino)"
@@ -93,9 +127,10 @@ echo "      balance         should be 100"
 echo
 
 echo "==> 7) Selected counters from /metrics"
-echo "    Useful lines: events accepted, events processed, bonus credits, rule hits"
+echo "    Useful lines: accepted, processed, outbox pending (0 when drained),"
+echo "    bonus credits, rule hits, retries / dlq"
 echo
-curl -sS "$API_URL/metrics" | rg 'engagepulse_(events_ingested|events_processed|ledger_credits|consumer_retries|consumer_dlq)_total|engagepulse_rule_hits' || true
+curl -sS "$API_URL/metrics" | rg 'engagepulse_(events_ingested|events_processed|ledger_credits|consumer_retries|consumer_dlq)_total|engagepulse_outbox_pending|engagepulse_rule_hits' || true
 echo
 
 echo "==> Demo complete"
