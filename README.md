@@ -1,10 +1,8 @@
 # EngagePulse
 
-Small Go backend for **fake casino / sports brands**.
+Small Go backend for **casino / sports brands**.
 
 Other systems send player actions (deposit, bet). EngagePulse updates that player’s VIP status, welcome bonus, and warning flags, and may add a reward balance of **100** once.
-
-New here? Read [docs/concepts.md](docs/concepts.md) — short and plain.
 
 ## Quick start
 
