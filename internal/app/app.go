@@ -17,6 +17,7 @@ import (
 	"github.com/o-mid/engagepulse/internal/api/httpapi"
 	"github.com/o-mid/engagepulse/internal/config"
 	"github.com/o-mid/engagepulse/internal/kafka"
+	"github.com/o-mid/engagepulse/internal/outbox"
 	"github.com/o-mid/engagepulse/internal/store"
 	"github.com/o-mid/engagepulse/internal/worker"
 )
@@ -53,6 +54,11 @@ func (a *App) Run(ctx context.Context) error {
 		return fmt.Errorf("migrate: %w", err)
 	}
 
+	pub := kafka.NewProducer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic)
+	defer func() { _ = pub.Close() }()
+
+	outboxPub := outbox.NewPublisher(a.store, pub, a.logger)
+
 	w := worker.New(a.store, a.logger)
 	consumer := kafka.NewConsumer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic, "engagepulse-workers", a.logger, w.Handle)
 	defer func() { _ = consumer.Close() }()
@@ -71,7 +77,7 @@ func (a *App) Run(ctx context.Context) error {
 		return fmt.Errorf("listen grpc: %w", err)
 	}
 
-	errCh := make(chan error, 3)
+	errCh := make(chan error, 4)
 	go func() {
 		a.logger.Info("http listening", "addr", a.cfg.HTTPAddr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -81,6 +87,11 @@ func (a *App) Run(ctx context.Context) error {
 	go func() {
 		a.logger.Info("grpc listening", "addr", a.cfg.GRPCAddr)
 		if err := grpcSrv.Serve(lis); err != nil {
+			errCh <- err
+		}
+	}()
+	go func() {
+		if err := outboxPub.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			errCh <- err
 		}
 	}()
