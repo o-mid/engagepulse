@@ -68,7 +68,8 @@ CI sets `DATABASE_URL` against a Postgres service so ledger and worker tests run
 | --- | --- |
 | Multi-tenant isolation | `migrations/`, `internal/store`, API key middleware |
 | Signed ingest | `internal/ingest`, `POST /v1/events` |
-| Event stream | `internal/kafka`, Compose Redpanda |
+| Outbox publish | `internal/store/outbox.go`, `internal/outbox` |
+| Event stream + DLQ | `internal/kafka`, topics `player.events` / `player.events.dlq` |
 | Rules / scoring / integrity | `internal/rules` |
 | Ledger-safe credits | `internal/ledger`, unique `(tenant_id, event_id)` |
 | REST + gRPC reads | `internal/api/httpapi`, `internal/api/grpcapi` |
