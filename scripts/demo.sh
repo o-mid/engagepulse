@@ -25,10 +25,27 @@ metric_value() {
   awk '{print $NF}' <<<"$line" | head -1 | cut -d. -f1
 }
 
-# Wait until outbox backlog is empty and processed count has caught ingested.
+# True when both demo players show the expected end state (guards Kafka backlog races).
+snapshots_ready() {
+  local acme nova
+  acme="$(curl -sf -H "X-API-Key: $ACME_KEY" "$API_URL/v1/players/load-acme-casino-0" || true)"
+  nova="$(curl -sf -H "X-API-Key: $NOVA_KEY" "$API_URL/v1/players/load-nova-sports-0" || true)"
+  [[ -n "$acme" && -n "$nova" ]] || return 1
+  echo "$acme" | rg -q 'welcome_bonus' || return 1
+  echo "$acme" | rg -q '"balance":100' || return 1
+  echo "$acme" | rg -q '"vip_tier":"(silver|gold)"' || return 1
+  echo "$nova" | rg -q 'welcome_bonus' || return 1
+  echo "$nova" | rg -q '"balance":100' || return 1
+  echo "$nova" | rg -q '"integrity_flag":"velocity"' || return 1
+  return 0
+}
+
+# Wait until outbox is empty, this run's processed delta catches ingest, and snapshots look right.
 wait_for_catch_up() {
+  local base_ingested="$1"
+  local base_processed="$2"
   local deadline=$(( $(date +%s) + DEMO_WAIT_SECONDS ))
-  local ingested processed pending
+  local ingested processed pending delta_in delta_out
   echo "==> 4) Wait until outbox is empty and worker catches up"
   echo "    We poll /metrics (not a fixed sleep). Timeout: ${DEMO_WAIT_SECONDS}s."
   echo
@@ -36,22 +53,30 @@ wait_for_catch_up() {
     ingested="$(metric_value engagepulse_events_ingested_total)"
     processed="$(metric_value engagepulse_events_processed_total)"
     pending="$(metric_value engagepulse_outbox_pending)"
+    delta_in=$(( ingested - base_ingested ))
+    delta_out=$(( processed - base_processed ))
+    if (( delta_in < 0 )); then delta_in=0; fi
+    if (( delta_out < 0 )); then delta_out=0; fi
 
-    if [[ "$ingested" -gt 0 && "$pending" -eq 0 && "$processed" -ge "$ingested" ]]; then
-      echo "    Caught up: ingested=$ingested processed=$processed outbox_pending=$pending"
+    if [[ "$delta_in" -gt 0 && "$pending" -eq 0 && "$delta_out" -ge "$delta_in" ]] && snapshots_ready; then
+      echo "    Caught up: this_run_ingested=$delta_in this_run_processed=$delta_out outbox_pending=$pending"
+      echo "    (totals: ingested=$ingested processed=$processed)"
       echo
       return 0
     fi
 
     if (( $(date +%s) >= deadline )); then
       echo "ERROR: timed out waiting for catch-up after ${DEMO_WAIT_SECONDS}s"
-      echo "  ingested=$ingested processed=$processed outbox_pending=$pending"
+      echo "  this_run_ingested=$delta_in this_run_processed=$delta_out outbox_pending=$pending"
+      echo "  totals: ingested=$ingested processed=$processed"
       echo "  Check that make run is still up and Redpanda is healthy."
       exit 1
     fi
 
-    if [[ "$processed" -lt "$ingested" || "$pending" -gt 0 ]]; then
-      echo "    still catching up… ingested=$ingested processed=$processed outbox_pending=$pending"
+    if [[ "$delta_out" -lt "$delta_in" || "$pending" -gt 0 ]]; then
+      echo "    still catching up… this_run_ingested=$delta_in this_run_processed=$delta_out outbox_pending=$pending"
+    elif ! snapshots_ready; then
+      echo "    still catching up… metrics ok, waiting for player results…"
     fi
     sleep 1
   done
@@ -84,6 +109,9 @@ fi
 echo "OK — server is up"
 echo
 
+BASE_INGESTED="$(metric_value engagepulse_events_ingested_total)"
+BASE_PROCESSED="$(metric_value engagepulse_events_processed_total)"
+
 echo "==> 2) Brand A: acme-casino (VIP path)"
 echo "    We send 1 deposit + several larger bets for a few players."
 echo "    Expect player load-acme-casino-0 to get welcome_bonus and a higher VIP tier."
@@ -98,7 +126,7 @@ echo
 go run ./cmd/loadgen -url "$API_URL" -tenant nova-sports -secret "$NOVA_SECRET" -mode velocity -n 8
 echo
 
-wait_for_catch_up
+wait_for_catch_up "$BASE_INGESTED" "$BASE_PROCESSED"
 
 echo "==> 5) Read acme player snapshot"
 echo "    GET /v1/players/load-acme-casino-0  (API key for acme-casino)"
