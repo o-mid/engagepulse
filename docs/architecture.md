@@ -12,7 +12,7 @@ Ingest acknowledges after the event is durably written to an outbox row. An in-p
 
 ## Outbox
 
-`POST /v1/events` returns 202 only after a unique `(tenant_id, event_id)` outbox insert (and player ensure) commit. Kafka publish happens asynchronously from the outbox loop. Duplicate ingest retries are idempotent at the outbox unique key.
+`POST /v1/events` returns 202 only after a unique `(tenant_id, event_id)` outbox insert (and player ensure) commit. Kafka publish happens asynchronously from the outbox loop. Duplicate ingest retries are idempotent at the outbox unique key. The publisher reclaims rows left in `publishing` after a process crash before claiming the next batch (single in-process publisher).
 
 ## Consumer retries and DLQ
 
