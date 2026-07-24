@@ -27,12 +27,12 @@ make demo
 
 ## Demo
 
-~30s terminal recording of `make demo`: acme VIP/welcome + nova velocity player snapshots, then `/metrics` ingest/process counts.
+~30s terminal recording of `make demo` on the outbox + rules + ledger path: both seed tenants, player snapshots, then selected `/metrics` counters.
 
-- Video (browser-playable): [engagepulse-demo-v0.1.0.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.0.mp4)
-- Asciinema source: [engagepulse-demo-v0.1.0.cast](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.0.cast) (`asciinema play engagepulse-demo-v0.1.0.cast`)
+- Video (browser-playable): [engagepulse-demo-v0.1.1.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.1.mp4)
+- Asciinema source: [engagepulse-demo-v0.1.1.cast](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.1.cast) (`asciinema play engagepulse-demo-v0.1.1.cast`)
 
-> Recordings on the `v0.1.0` release show the happy path. After outbox + DLQ land on `develop`/`main`, re-record and attach updated assets (see release notes) so the video matches the current ingest path.
+Older `engagepulse-demo-v0.1.0.*` assets remain on the same release for history.
 
 Reproduce locally:
 
