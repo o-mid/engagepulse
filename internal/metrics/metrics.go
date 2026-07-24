@@ -33,6 +33,10 @@ var (
 		Name: "engagepulse_consumer_dlq_total",
 		Help: "Events routed to the dead-letter topic after exhausted retries",
 	})
+	OutboxPending = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "engagepulse_outbox_pending",
+		Help: "Outbox rows waiting to be published (pending or publishing)",
+	})
 )
 
 func Handler() http.Handler {

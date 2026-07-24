@@ -185,3 +185,12 @@ func (s *Store) CountOutbox(ctx context.Context, tenantID, eventID string) (int6
 	`, tenantID, eventID).Scan(&n)
 	return n, err
 }
+
+// CountOutboxBacklog counts rows not yet fully published (pending or mid-send).
+func (s *Store) CountOutboxBacklog(ctx context.Context) (int64, error) {
+	var n int64
+	err := s.pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM outbox WHERE status IN ($1, $2)
+	`, OutboxPending, OutboxPublishing).Scan(&n)
+	return n, err
+}
