@@ -1,6 +1,6 @@
 # EngagePulse
 
-Multi-tenant player engagement service for simulated iGaming brands.
+v0.1.0 — multi-tenant player engagement service for simulated iGaming brands.
 
 Ingest signed player activity, apply a small rules set (welcome offer, VIP score, integrity velocity), and credit rewards once — even when Kafka redelivers.
 
