@@ -20,8 +20,9 @@ type Config struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		HTTPAddr:      env("HTTP_ADDR", ":8080"),
-		GRPCAddr:      env("GRPC_ADDR", ":9090"),
+		// Bind to loopback by default so demos hit 127.0.0.1, not [::1].
+		HTTPAddr:      env("HTTP_ADDR", "127.0.0.1:8080"),
+		GRPCAddr:      env("GRPC_ADDR", "127.0.0.1:9090"),
 		DatabaseURL:   strings.TrimSpace(os.Getenv("DATABASE_URL")),
 		KafkaBrokers:  splitCSV(env("KAFKA_BROKERS", "localhost:19092")),
 		KafkaTopic:    strings.TrimSpace(env("KAFKA_TOPIC", "player.events")),
