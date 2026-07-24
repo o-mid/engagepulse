@@ -53,14 +53,11 @@ func (a *App) Run(ctx context.Context) error {
 		return fmt.Errorf("migrate: %w", err)
 	}
 
-	pub := kafka.NewProducer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic)
-	defer func() { _ = pub.Close() }()
-
 	w := worker.New(a.store, a.logger)
 	consumer := kafka.NewConsumer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic, "engagepulse-workers", a.logger, w.Handle)
 	defer func() { _ = consumer.Close() }()
 
-	api := httpapi.New(a.store, pub, a.logger)
+	api := httpapi.New(a.store, a.store, a.logger)
 	srv := &http.Server{
 		Addr:              a.cfg.HTTPAddr,
 		Handler:           api.Handler(),

@@ -15,19 +15,19 @@ import (
 	"github.com/o-mid/engagepulse/internal/store"
 )
 
-type EventPublisher interface {
-	Publish(ctx context.Context, evt domain.Event) error
+type EventAccepter interface {
+	EnqueueEvent(ctx context.Context, evt domain.Event) error
 }
 
 type Server struct {
 	store  *store.Store
-	pub    EventPublisher
+	accept EventAccepter
 	logger *slog.Logger
 	mux    *http.ServeMux
 }
 
-func New(st *store.Store, pub EventPublisher, logger *slog.Logger) *Server {
-	s := &Server{store: st, pub: pub, logger: logger, mux: http.NewServeMux()}
+func New(st *store.Store, accept EventAccepter, logger *slog.Logger) *Server {
+	s := &Server{store: st, accept: accept, logger: logger, mux: http.NewServeMux()}
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.Handle("GET /metrics", metrics.Handler())
 	s.mux.HandleFunc("POST /v1/events", s.handleIngest)
@@ -66,7 +66,6 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 
 	tenant, err := s.store.GetTenant(r.Context(), evt.TenantID)
 	if err != nil {
-		// Same status as bad HMAC so callers cannot probe tenant IDs cheaply.
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -81,15 +80,21 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.store.EnsurePlayer(r.Context(), evt.TenantID, evt.PlayerID); err != nil {
-		s.logger.Error("ensure player", "err", err)
-		writeError(w, http.StatusInternalServerError, "internal error")
+	err = s.accept.EnqueueEvent(r.Context(), evt)
+	if errors.Is(err, store.ErrDuplicateEvent) {
+		// Idempotent retry: already durably accepted.
+		metrics.EventsIngested.Inc()
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"status":   "accepted",
+			"event_id": evt.EventID,
+		})
 		return
 	}
-
-	if err := s.pub.Publish(r.Context(), evt); err != nil {
-		s.logger.Error("publish event", "err", err)
-		writeError(w, http.StatusBadGateway, "publish failed")
+	if err != nil {
+		s.logger.Error("enqueue event", "err", err)
+		writeError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
