@@ -23,6 +23,22 @@ make demo
 
 `make demo` sends traffic for both seed tenants and prints player snapshots (VIP / integrity / balance).
 
+## Demo
+
+~30s terminal recording of `make demo`: acme VIP/welcome + nova velocity player snapshots, then `/metrics` ingest/process counts.
+
+[engagepulse-demo-v0.1.0.cast](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.0.cast) (asciinema; play with `asciinema play engagepulse-demo-v0.1.0.cast`)
+
+Reproduce locally:
+
+```bash
+docker compose up -d postgres redpanda
+make migrate
+make run
+# other terminal:
+make demo
+```
+
 ## Surfaces
 
 | Surface | Path |
