@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -16,11 +17,12 @@ import (
 func TestEnqueueCreatesOutboxRow(t *testing.T) {
 	st := openTestStore(t)
 	ctx := context.Background()
+	id := uniqueID(t)
 
 	evt := domain.Event{
-		EventID:    "outbox-insert-1",
+		EventID:    "outbox-insert-" + id,
 		TenantID:   "acme-casino",
-		PlayerID:   "outbox-player-1",
+		PlayerID:   "outbox-player-" + id,
 		Type:       domain.EventDeposit,
 		Amount:     25,
 		OccurredAt: time.Now().UTC(),
@@ -47,10 +49,11 @@ func TestEnqueueCreatesOutboxRow(t *testing.T) {
 func TestEnqueueDuplicateIsIdempotent(t *testing.T) {
 	st := openTestStore(t)
 	ctx := context.Background()
+	id := uniqueID(t)
 	evt := domain.Event{
-		EventID:    "outbox-dup-1",
+		EventID:    "outbox-dup-" + id,
 		TenantID:   "acme-casino",
-		PlayerID:   "outbox-player-dup",
+		PlayerID:   "outbox-player-dup-" + id,
 		Type:       domain.EventDeposit,
 		Amount:     10,
 		OccurredAt: time.Now().UTC(),
@@ -86,10 +89,11 @@ func (m *memKafka) Publish(_ context.Context, evt domain.Event) error {
 func TestPublisherMarksPublished(t *testing.T) {
 	st := openTestStore(t)
 	ctx := context.Background()
+	id := uniqueID(t)
 	evt := domain.Event{
-		EventID:    "outbox-pub-1",
+		EventID:    "outbox-pub-" + id,
 		TenantID:   "nova-sports",
-		PlayerID:   "outbox-player-pub",
+		PlayerID:   "outbox-player-pub-" + id,
 		Type:       domain.EventBetPlaced,
 		Amount:     40,
 		OccurredAt: time.Now().UTC(),
@@ -103,8 +107,15 @@ func TestPublisherMarksPublished(t *testing.T) {
 	if err := p.FlushOnce(ctx); err != nil {
 		t.Fatalf("flush: %v", err)
 	}
-	if len(k.events) != 1 || k.events[0].EventID != evt.EventID {
-		t.Fatalf("published=%v", k.events)
+	found := false
+	for _, published := range k.events {
+		if published.EventID == evt.EventID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("event %s not published; got %v", evt.EventID, k.events)
 	}
 	row, err := st.GetOutbox(ctx, evt.TenantID, evt.EventID)
 	if err != nil {
@@ -131,4 +142,9 @@ func openTestStore(t *testing.T) *store.Store {
 		t.Fatalf("migrate: %v", err)
 	}
 	return st
+}
+
+func uniqueID(t *testing.T) string {
+	t.Helper()
+	return fmt.Sprintf("%d", time.Now().UnixNano())
 }

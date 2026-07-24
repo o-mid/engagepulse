@@ -2,9 +2,11 @@ package ledger_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/o-mid/engagepulse/internal/ledger"
 	"github.com/o-mid/engagepulse/internal/store"
@@ -26,9 +28,10 @@ func TestCreditOnceUnderDuplicateDelivery(t *testing.T) {
 		t.Fatalf("migrate: %v", err)
 	}
 
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	tenantID := "acme-casino"
-	playerID := "ledger-dup-player"
-	eventID := "evt-ledger-dup-1"
+	playerID := "ledger-dup-player-" + suffix
+	eventID := "evt-ledger-dup-" + suffix
 	if err := st.EnsurePlayer(ctx, tenantID, playerID); err != nil {
 		t.Fatalf("ensure player: %v", err)
 	}
