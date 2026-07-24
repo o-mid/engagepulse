@@ -83,8 +83,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 	}
 }
 
-// processEvent returns nil only when the offset is safe to commit:
-// handler succeeded, or retries exhausted and the DLQ write succeeded.
+// processEvent: ok = handler worked, or we gave up and wrote the dead-letter topic.
 func (c *Consumer) processEvent(ctx context.Context, evt domain.Event) error {
 	var lastErr error
 	attempts := c.maxAttempts

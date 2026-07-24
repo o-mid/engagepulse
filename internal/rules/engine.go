@@ -24,8 +24,7 @@ type Engine struct{}
 
 func New() *Engine { return &Engine{} }
 
-// Apply runs acquisition → value → trust. Order is fixed so a single deposit can
-// unlock a welcome credit before later bets move VIP / integrity state.
+// Apply runs welcome → VIP → velocity in that fixed order.
 func (e *Engine) Apply(evt domain.Event, st store.PlayerState, recentBets int64) Result {
 	res := e.ApplyWelcome(evt, st)
 	res = e.ApplyVIP(evt, res)
@@ -33,8 +32,7 @@ func (e *Engine) Apply(evt domain.Event, st store.PlayerState, recentBets int64)
 	return res
 }
 
-// ApplyWelcome: first successful deposit tags the player and requests a one-time credit.
-// Repeat deposits keep the tag but must not request another credit.
+// ApplyWelcome: first deposit adds welcome_bonus and asks for +100 once.
 func (e *Engine) ApplyWelcome(evt domain.Event, st store.PlayerState) Result {
 	res := Result{State: st}
 	if evt.Type != domain.EventDeposit {
@@ -51,7 +49,7 @@ func (e *Engine) ApplyWelcome(evt domain.Event, st store.PlayerState) Result {
 	return res
 }
 
-// ApplyVIP treats stake size as engagement signal: larger / more bets raise score and tier.
+// ApplyVIP: each bet adds its amount to score, then maps score to bronze/silver/gold.
 func (e *Engine) ApplyVIP(evt domain.Event, in Result) Result {
 	st := in.State
 	if evt.Type != domain.EventBetPlaced {
@@ -66,12 +64,12 @@ func (e *Engine) ApplyVIP(evt domain.Event, in Result) Result {
 	return in
 }
 
-// ApplyIntegrity flags burst betting. It records a signal; it does not block wagers in v0.1.
+// ApplyIntegrity: many bets in a short time → set velocity flag (warning only).
 func (e *Engine) ApplyIntegrity(evt domain.Event, in Result, recentBets int64) Result {
 	if evt.Type != domain.EventBetPlaced {
 		return in
 	}
-	// recentBets is other bets already counted in the window; +1 includes this wager.
+	// recentBets = other bets in the last minute; +1 counts this bet too.
 	if recentBets+1 < VelocityBetLimit {
 		return in
 	}

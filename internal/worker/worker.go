@@ -34,7 +34,7 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 		return err
 	}
 
-	// processed_events is the at-least-once gate for rule side effects.
+	// Remember this event id so a replay does not run the rules again.
 	err := w.store.MarkProcessed(ctx, evt.TenantID, evt.PlayerID, evt.EventID, evt.Type)
 	if errors.Is(err, store.ErrDuplicateEvent) {
 		w.logger.Info("skip duplicate event", "event_id", evt.EventID, "tenant_id", evt.TenantID)
@@ -64,7 +64,7 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 	}
 
 	if res.CreditAmount > 0 {
-		// Ledger uniqueness is the last line of defence if processed_events is raced/replayed.
+		// Extra safety: same event id cannot add the bonus twice in the ledger.
 		err := w.ledger.Credit(ctx, evt.TenantID, evt.PlayerID, evt.EventID, res.CreditReason, res.CreditAmount)
 		if errors.Is(err, ledger.ErrDuplicateCredit) {
 			w.logger.Info("skip duplicate credit", "event_id", evt.EventID)

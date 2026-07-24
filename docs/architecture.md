@@ -1,133 +1,142 @@
-# Architecture
+# How the app is built (simple)
 
-EngagePulse is **one Go binary** that:
+EngagePulse is **one Go program**. When it runs it:
 
-- accepts signed player events over HTTP
-- stores them in a Postgres **outbox**
-- publishes outbox rows to **Kafka** (Redpanda in local Compose)
-- consumes those events in-process
-- applies engagement rules and ledger credits
-- exposes the resulting player snapshot over **REST + gRPC**
+1. Accepts player events over HTTP
+2. Saves them in Postgres
+3. Puts them on a message stream (Kafka; locally we use Redpanda)
+4. Reads those messages and runs the three rules
+5. Lets you read the player result over HTTP or gRPC
 
-If you are new to the product words (VIP, welcome offer, velocity), read [concepts.md](./concepts.md) first.
+If VIP / welcome bonus / velocity are new words, read [concepts.md](./concepts.md) first.
 
-## Why one binary
+## Why one program
 
-The interview-relevant pieces are the event contract, outbox, idempotent processing, and ledger uniqueness — not a service mesh. Package boundaries already separate ingest, outbox, Kafka, rules, and ledger. Splitting API vs worker into two deployables later is a packaging choice.
+The useful parts are:
 
-## Request path (detailed)
+- safe accept of events
+- message stream
+- rules
+- bonus credits that do not double-pay
+
+We keep that in one binary so the demo stays easy to run. Later you could split “API” and “worker” into two processes if needed.
+
+## The path of one event
 
 ```text
-Partner / loadgen
-  │
-  ▼
+loadgen / partner
+   |
+   v
 POST /v1/events
-  • validate JSON + event type/amount
-  • resolve tenant; verify HMAC on raw body
-  • BEGIN tx: ensure player rows + INSERT outbox (unique tenant_id+event_id)
-  • COMMIT → HTTP 202 Accepted
-  │
-  ▼
-Outbox publisher (goroutine)
-  • reclaim stale "publishing" rows after crashes
-  • claim pending rows (SKIP LOCKED)
-  • Publish to Kafka topic player.events
-  • mark published (or return to pending on failure)
-  │
-  ▼
-Kafka consumer (goroutine)
-  • fetch message
-  • handler = worker.Handle
-  • on failure: retry with backoff (3 attempts)
-  • still failing: write DeadLetter to player.events.dlq, then commit
-  │
-  ▼
+   - check JSON
+   - check brand secret (HMAC signature)
+   - save row in outbox table
+   - reply 202 Accepted
+   |
+   v
+Outbox publisher (background)
+   - take pending rows
+   - send to Kafka topic player.events
+   - mark row published
+   |
+   v
+Kafka consumer (background)
+   - read message
+   - run worker
+   - if worker fails: try again up to 3 times
+   - if still failing: send copy to player.events.dlq, then move on
+   |
+   v
 Worker
-  • mark processed_events (dedupe)
-  • load player_state
-  • rules: welcome → VIP → integrity
-  • optional ledger credit (unique tenant_id+event_id)
-  │
-  ▼
+   - remember event id (skip if seen)
+   - run welcome → VIP → velocity rules
+   - maybe add bonus credit
+   |
+   v
 GET /v1/players/{id}  or  gRPC GetPlayer
-  • auth via tenant API key
-  • return VIP, offers, integrity flag, balance
+   - needs brand API key
+   - returns VIP, tags, flag, balance
 ```
 
-## Why Kafka (Redpanda locally)
+## What Kafka is here
 
-Kafka is a durable **activity stream**. Producers append; consumers catch up independently.
+Kafka is a **log of messages**.
 
-- HTTP does not wait for rule evaluation.
-- The worker can restart and continue from the consumer group offset.
-- Bursts of bets do not block ingest.
+- Writers append events.
+- Readers process them in order (per group).
+- If the worker restarts, it can continue where it left off.
 
-Locally we run **Redpanda** because it speaks the Kafka protocol and fits Compose. Production would use a managed Kafka-compatible cluster the same way.
+Locally, **Redpanda** is a smaller tool that speaks the same Kafka style of API.
 
-## Outbox (durable accept, async publish)
+## Outbox (save first, send later)
 
-**Problem without an outbox:** if the API published to Kafka and then crashed (or Kafka was briefly down), you get ambiguous “did we accept this event?” behaviour.
-
-**What we do instead:**
-
-1. `POST /v1/events` returns **202 only after** a successful outbox insert (and player ensure) in one transaction.
-2. A background publisher drains `pending` rows to Kafka.
-3. Unique `(tenant_id, event_id)` makes partner retries idempotent at the outbox layer.
-4. Rows stuck in `publishing` after a crash are **reclaimed** back to `pending` before the next claim (safe with a single in-process publisher).
-
-Code: `internal/store/outbox.go`, `internal/outbox/publisher.go`.
-
-## Consumer retries and DLQ
-
-**Problem:** handlers fail (DB blip, bug, poison payload). Silently skipping loses events; infinite retry blocks the partition forever.
+**Problem:** if we send to Kafka and the app dies, it is unclear whether the event was accepted.
 
 **What we do:**
 
-1. Retry the same event up to **3** times with short backoff.
-2. If still failing, publish a **dead-letter** JSON document to `player.events.dlq` (override with `KAFKA_DLQ_TOPIC`) containing the original event, error string, and attempt count.
-3. Commit the original offset only after success **or** successful DLQ write.
-4. If DLQ publish fails, **do not commit** — the message can be redelivered.
+1. Save the event in an `outbox` table first.
+2. Only then reply `202`.
+3. A background loop sends pending rows to Kafka.
+4. Same `event_id` cannot be inserted twice for the same brand.
 
-Prometheus: `engagepulse_consumer_retries_total`, `engagepulse_consumer_dlq_total`.
+If the app crashes while sending, rows stuck as “publishing” are put back to “pending” and tried again.
+
+Code: `internal/store/outbox.go`, `internal/outbox/publisher.go`.
+
+## Retries and the dead-letter topic (DLQ)
+
+**Problem:** sometimes processing fails (DB blip, bad data, bug).
+
+**What we do:**
+
+1. Try the same event up to **3** times.
+2. If it still fails, write a “dead letter” message to `player.events.dlq` with:
+   - the original event
+   - the error text
+   - how many tries we used
+3. Only then mark the original Kafka message as done.
+4. If even the DLQ write fails, we do **not** mark it done, so Kafka can deliver it again.
 
 Code: `internal/kafka/consumer.go`, `internal/kafka/dlq.go`.
 
-## Why ledger keys are `(tenant_id, event_id)`
+## Why bonus credits use a unique event id
 
-Reward credits are money-adjacent. Kafka and consumers are at-least-once, so the same event can be handled more than once.
+The stream may deliver the same event more than once.
 
-The ledger insert is uniquely keyed by `(tenant_id, event_id)`. A second credit attempt becomes `ErrDuplicateCredit` and leaves the balance unchanged.
+The bonus table has a unique key on `(tenant_id, event_id)`.
+A second credit for the same event is rejected, so the balance does not jump by another 100.
 
-## Rules engine (product logic)
+## Rules order
 
-Order matters and is fixed:
+Always:
 
-1. **Welcome offer** on first deposit → tag + credit 100  
-2. **VIP score** on bets → update score/tier  
-3. **Integrity velocity** on bet bursts → set flag  
+1. Welcome bonus (first deposit)
+2. VIP score (bets)
+3. Velocity flag (many bets quickly)
 
-Details and thresholds: [concepts.md](./concepts.md). Code: `internal/rules`.
+Details: [concepts.md](./concepts.md). Code: `internal/rules`.
 
-## Tenancy and auth
+## Login / keys
 
-| Surface | Auth |
+| Call | How you prove who you are |
 | --- | --- |
-| `POST /v1/events` | HMAC `X-Signature` with tenant secret over raw body |
-| `GET /v1/players/{id}` | `X-API-Key` |
+| `POST /v1/events` | Header `X-Signature` (HMAC of the raw body) |
+| `GET /v1/players/{id}` | Header `X-API-Key` |
 | gRPC `GetPlayer` | metadata `x-api-key` |
 
-Unknown tenant and bad HMAC both return **401** so callers cannot cheaply probe tenant ids. gRPC ignores a mismatched `tenant_id` in the request and always uses the authenticated tenant.
+Unknown brand and bad signature both return **401** (same answer on purpose).
 
-Seed tenants `acme-casino` and `nova-sports` are local-demo only (see `.env.example`).
+Demo brands and keys are only for local use (see `.env.example`).
 
-## Schema migrations under parallel tests
+## Tests and migrations
 
-`store.Migrate` takes a Postgres **advisory lock** so concurrent packages in `go test ./...` do not race DDL. CI also runs `go test ./... -p 1` as a belt-and-suspenders serialisation.
+Several test packages talk to the same Postgres.
+`Migrate` takes a database lock so they do not fight while creating tables.
+CI also runs tests one package at a time (`go test ./... -p 1`).
 
-## What is intentionally out of scope
+## Not in this project
 
-- Game clients / web UI
-- Real payments, KYC, or licensed gambling flows
-- Multi-publisher outbox claiming across many nodes (would need leasing beyond reclaim)
-- ML personalisation
-- Full fraud case management UI for DLQ messages
+- Game UI / website for players
+- Real money payments
+- Full fraud team tools for DLQ messages
+- Machine-learning “personal offers”

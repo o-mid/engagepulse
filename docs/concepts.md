@@ -1,76 +1,101 @@
-# Concepts (no prior iGaming knowledge assumed)
+# Simple guide: what this project is about
 
-EngagePulse is a small backend that turns raw player activity into **engagement state** and **safe reward credits**. This page explains the product words used in the code and demos.
+EngagePulse is a small backend for **fake online casino / sports brands**.
 
-## Multi-tenant (white-label)
+Games and payments send it short messages like “player deposited” or “player placed a bet”.
+EngagePulse then updates that player’s status and may add a **bonus reward**.
 
-A **tenant** is one brand on the shared platform (seed examples: `acme-casino`, `nova-sports`).
+You do **not** need casino experience to read this. Plain meanings below.
 
-- Each tenant has its own players, balances, VIP scores, and flags.
-- Tenants authenticate reads with an API key and sign ingest with an HMAC secret.
-- Data is never shared across tenants: every query is scoped by `tenant_id`.
+## Two brands in the demo
 
-Think “one codebase, many casinos,” not one global leaderboard.
+The demo has two brands sharing one app:
 
-## Player activity events
-
-Upstream systems (games, payments, sessions) send **events**. This service does not run the games; it reacts to what already happened.
-
-| Event type | Meaning in plain language |
+| Brand id | What the demo shows |
 | --- | --- |
-| `deposit` | Player added funds (or an equivalent credit) |
-| `bet_placed` | Player staked money on a round/wager |
-| `session_heartbeat` | Player is still active in a session (kept for realism; rules mostly ignore it today) |
+| `acme-casino` | Welcome bonus + VIP level going up |
+| `nova-sports` | Welcome bonus + a “betting too fast” warning flag |
 
-Each event has a stable `event_id`. Retries must reuse the same id so the system can stay idempotent.
+Each brand only sees its own players. Mixing data across brands is not allowed.
 
-## Engagement / “gamification” in this repo
+## What is a “tenant”?
 
-In product language, **engagement** means keeping players interested with status, offers, and trust controls. EngagePulse implements three tiny rules that show the pattern:
+A **tenant** = one brand (one casino or sportsbook name).
 
-### 1. Welcome offer (acquisition)
+- Each brand has its own API key (to read player info).
+- Each brand has its own secret (to sign events).
+- Player scores and balances stay inside that brand.
 
-- **Goal:** reward a player’s first deposit.
-- **Effect:** tag the player with `welcome_bonus` and credit **100** fake reward units once.
-- **Why it matters:** money-adjacent actions must be idempotent — replaying the same deposit must not pay twice.
+## What is an “event”?
 
-### 2. VIP score / tier (value & personalisation)
+An **event** is a small JSON message about something a player did.
 
-- **Goal:** recognise heavier play with a status tier.
-- **How:** each `bet_placed` adds `amount` to a running **score**.
-- **Tiers:**
-  - `bronze` — below 1000
-  - `silver` — score ≥ 1000
-  - `gold` — score ≥ 5000
-- **Why it matters:** personalisation is often just durable counters + thresholds, not ML.
+| Event type | Simple meaning |
+| --- | --- |
+| `deposit` | Player put money in |
+| `bet_placed` | Player made a bet |
+| `session_heartbeat` | Player is still online (almost unused by rules today) |
 
-### 3. Integrity / velocity flag (platform trust)
+Every event has an `event_id`. If the sender retries, it should reuse the **same** id so we do not apply the bonus twice.
 
-- **Goal:** mark suspicious burst betting for review.
-- **How:** if a player places **5+ bets within about one minute**, set `integrity_flag = velocity`.
-- **What it is not:** a full fraud engine. It does not block play in v0.1; it records a signal ops can act on.
-- **Why it matters:** engagement platforms must balance rewards with abuse controls.
+## The three rules (the “game” part)
 
-## Reward balance vs real money
+### 1. Welcome bonus
 
-The **balance** in player snapshots is a **reward ledger** (bonus credits), not a full casino wallet or fiat account.
+- Trigger: first `deposit` for that player.
+- Result: tag `welcome_bonus` + add **100** to reward balance.
+- If the same deposit is sent again: keep the tag, **do not** add another 100.
 
-- Credits use a ledger table with unique `(tenant_id, event_id)`.
-- That uniqueness is what makes Kafka redelivery safe for money-like effects.
+### 2. VIP level
 
-## End-to-end path (product view)
+- Trigger: each `bet_placed`.
+- The bet amount is added to a **score**.
+- Levels:
+  - `bronze` — score under 1000
+  - `silver` — score 1000 or more
+  - `gold` — score 5000 or more
 
-1. Partner sends a signed event for a tenant’s player.
-2. API accepts it only after it is stored durably (outbox).
-3. Publisher pushes the event onto the activity stream (Kafka).
-4. Worker applies the three rules and may credit the ledger.
-5. Ops/product reads the player snapshot (VIP, offers, integrity flag, balance) over REST or gRPC.
+VIP here is just a status label from that score. Not a real loyalty product.
 
-## Demo tenants (what you should see)
+### 3. “Too fast” flag (integrity / velocity)
 
-| Tenant | Demo intent | Typical snapshot signals |
-| --- | --- | --- |
-| `acme-casino` | VIP / welcome path | `welcome_bonus`, higher VIP tier, balance 100 |
-| `nova-sports` | Integrity path | `welcome_bonus`, `integrity_flag: velocity`, balance 100 |
+- Trigger: about **5 or more bets in one minute**.
+- Result: set `integrity_flag` to `velocity`.
+- This is a **warning mark** for later review. It does not stop the player in this version.
 
-Exact VIP tier depends on bet amounts in the loadgen run; the important part is that the two tenants diverge for different reasons.
+## Reward balance (not real cash)
+
+The `balance` field is **bonus points / reward credits** for the demo.
+
+It is **not**:
+
+- real bank money
+- a full casino wallet
+- crypto custody
+
+We still treat it carefully: the same event must never pay the bonus twice.
+
+## How a message moves through the app
+
+1. Brand sends a signed event to `POST /v1/events`.
+2. App saves it in the database first (outbox table).
+3. A background job puts it on the message stream (Kafka / Redpanda).
+4. A worker reads it and runs the three rules.
+5. You read the player with `GET /v1/players/{id}` (API key required).
+
+## What “good” looks like in `make demo`
+
+**Acme player** (`load-acme-casino-0`):
+
+- has `welcome_bonus`
+- VIP is usually `silver` or `gold` (depends on bet sizes in the run)
+- `balance` is `100`
+
+**Nova player** (`load-nova-sports-0`):
+
+- has `welcome_bonus`
+- VIP often stays `bronze` (small bets)
+- `integrity_flag` is `velocity` (many bets quickly)
+- `balance` is `100`
+
+If both players look different for clear reasons, the demo worked.

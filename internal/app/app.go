@@ -54,7 +54,7 @@ func (a *App) Run(ctx context.Context) error {
 		return fmt.Errorf("migrate: %w", err)
 	}
 
-	// Main stream vs DLQ use separate producers so topics never get crossed by accident.
+	// Normal events and failed-event copies use two different Kafka topics.
 	pub := kafka.NewProducer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic)
 	defer func() { _ = pub.Close() }()
 

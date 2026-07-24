@@ -82,10 +82,10 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 202 means "durably accepted into the outbox", not "already on Kafka".
+	// 202 = saved in the outbox. Kafka send happens in the background.
 	err = s.accept.EnqueueEvent(r.Context(), evt)
 	if errors.Is(err, store.ErrDuplicateEvent) {
-		// Partner retried the same event_id; treat as success.
+		// Same event_id again — already saved; still return 202.
 		metrics.EventsIngested.Inc()
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)

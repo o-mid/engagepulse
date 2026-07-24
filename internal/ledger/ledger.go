@@ -19,7 +19,7 @@ func New(pool *pgxpool.Pool) *Ledger {
 	return &Ledger{pool: pool}
 }
 
-// Credit applies a reward once per (tenant, event). Unique violation ⇒ already paid.
+// Credit adds reward once per brand+event. Second time is ignored as already paid.
 func (l *Ledger) Credit(ctx context.Context, tenantID, playerID, eventID, reason string, amount int64) error {
 	if amount == 0 {
 		return nil

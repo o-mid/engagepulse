@@ -1,14 +1,14 @@
 # EngagePulse
 
-v0.1.0 — multi-tenant **player engagement** backend for simulated iGaming brands.
+Small Go backend for **fake casino / sports brands**.
 
-Partners send signed player activity (`deposit`, `bet_placed`, `session_heartbeat`). EngagePulse stores each event durably, publishes it on a Kafka stream, applies a small rules set (welcome offer, VIP score, integrity velocity), and credits rewards **once** — even when messages are redelivered.
+Other systems send player actions (deposit, bet). EngagePulse updates that player’s VIP status, welcome bonus, and warning flags, and may add a reward balance of **100** once.
 
-New to VIP / welcome offers / velocity flags? Start with [docs/concepts.md](docs/concepts.md).
+New here? Read [docs/concepts.md](docs/concepts.md) — short and plain.
 
 ## Quick start
 
-Prefer local `make run` against Compose Postgres + Redpanda. The Compose app image may need `GOPROXY` if Docker cannot reach `proxy.golang.org`.
+Use the app on your machine. Start only Postgres + Redpanda in Docker:
 
 ```bash
 cp .env.example .env
@@ -23,18 +23,21 @@ In another terminal:
 make demo
 ```
 
-`make demo` sends traffic for both seed tenants and prints player snapshots (VIP / integrity / balance).
+`make demo` explains each step, sends traffic for two brands, then prints both player results.
 
-## Demo
+> If the Compose **app image** fails to build (module download blocked in Docker), that is fine. Local `make run` is the normal path.
 
-~30s terminal recording of `make demo` on the outbox + rules + ledger path: both seed tenants, player snapshots, then selected `/metrics` counters.
+## Demo video
 
-- Video (browser-playable): [engagepulse-demo-v0.1.1.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.1.mp4)
-- Asciinema source: [engagepulse-demo-v0.1.1.cast](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.1.cast) (`asciinema play engagepulse-demo-v0.1.1.cast`)
+About 30 seconds of terminal output for `make demo` (two brands + player JSON + counters).
 
-Older `engagepulse-demo-v0.1.0.*` assets remain on the same release for history.
+**Latest release `v0.2.0`:**
 
-Reproduce locally:
+- Video: [engagepulse-demo-v0.2.0.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.2.0/engagepulse-demo-v0.2.0.mp4)
+- Text recording: [engagepulse-demo-v0.2.0.cast](https://github.com/o-mid/engagepulse/releases/download/v0.2.0/engagepulse-demo-v0.2.0.cast)  
+  (`asciinema play engagepulse-demo-v0.2.0.cast`)
+
+Run it yourself:
 
 ```bash
 docker compose up -d postgres redpanda
@@ -44,58 +47,48 @@ make run
 make demo
 ```
 
-## What you are looking at
+## What the demo brands show
 
-| Idea | In this repo |
+| Brand | Meant to show | Look for |
+| --- | --- | --- |
+| `acme-casino` | Welcome bonus + VIP going up | `welcome_bonus`, VIP `silver` or `gold`, `balance: 100` |
+| `nova-sports` | Betting too fast | `welcome_bonus`, `integrity_flag: velocity`, `balance: 100` |
+
+## Plain map of ideas → code
+
+| Idea | Where |
 | --- | --- |
-| White-label brands | Tenants `acme-casino` and `nova-sports` |
-| Player activity stream | Kafka topic `player.events` (Redpanda locally) |
-| Safe accept under failure | Postgres **outbox**, then async publish |
-| Poison / repeated handler failures | Retries + DLQ topic `player.events.dlq` |
-| Welcome bonus | First deposit → tag + ledger credit 100 |
-| VIP status | Bet amounts raise score → bronze/silver/gold |
-| Integrity signal | Burst betting → `velocity` flag |
-| No double pay | Ledger unique `(tenant_id, event_id)` |
+| Words like VIP / welcome / velocity | [docs/concepts.md](docs/concepts.md) |
+| How messages move through the app | [docs/architecture.md](docs/architecture.md) |
+| Two brands, separate data | `migrations/`, `internal/store` |
+| Signed event intake | `internal/ingest`, `POST /v1/events` |
+| Save first, send to stream later | `internal/store/outbox.go`, `internal/outbox` |
+| Message stream + failed-message topic | `internal/kafka` |
+| The three rules | `internal/rules` |
+| Bonus credit without double-pay | `internal/ledger` |
+| Read player over HTTP / gRPC | `internal/api/httpapi`, `internal/api/grpcapi` |
 
-## Surfaces
+## HTTP / gRPC surfaces
 
-| Surface | Path |
+| What | Path |
 | --- | --- |
-| Ingest | `POST /v1/events` (HMAC `X-Signature`) |
-| Player read | `GET /v1/players/{id}` (`X-API-Key`) |
-| gRPC | `GetPlayer` (metadata `x-api-key`) |
+| Send event | `POST /v1/events` (header `X-Signature`) |
+| Read player | `GET /v1/players/{id}` (header `X-API-Key`) |
+| Read player (gRPC) | `GetPlayer` (metadata `x-api-key`) |
 | Health | `GET /healthz` |
-| Metrics | `GET /metrics` |
+| Counters | `GET /metrics` |
 
-## Local tooling
+## Make targets
 
-| Command | Purpose |
+| Command | What it does |
 | --- | --- |
-| `make up` | Postgres + Redpanda |
-| `make migrate` / `make seed` | Schema + seed tenants |
-| `make loadgen` | Signed event traffic |
-| `make demo` | End-to-end happy path |
-| `make test` | Unit + DB tests (set `DATABASE_URL`) |
-
-CI sets `DATABASE_URL` against a Postgres service and runs `go test ./... -p 1` so ledger/worker/outbox tests execute without parallel migrate races.
-
-## Capability map
-
-| Capability | Where to look |
-| --- | --- |
-| Product concepts (VIP, offers, integrity) | [docs/concepts.md](docs/concepts.md) |
-| End-to-end architecture | [docs/architecture.md](docs/architecture.md) |
-| Multi-tenant isolation | `migrations/`, `internal/store`, API key middleware |
-| Signed ingest | `internal/ingest`, `POST /v1/events` |
-| Outbox publish | `internal/store/outbox.go`, `internal/outbox` |
-| Event stream + DLQ | `internal/kafka`, topics `player.events` / `player.events.dlq` |
-| Rules / scoring / integrity | `internal/rules` |
-| Ledger-safe credits | `internal/ledger`, unique `(tenant_id, event_id)` |
-| REST + gRPC reads | `internal/api/httpapi`, `internal/api/grpcapi` |
-| Observability | structured logs in `internal/app`, `/metrics` |
-| Local demo | `make demo`, `cmd/loadgen`, `scripts/demo.sh` |
+| `make up` | Start Postgres + Redpanda |
+| `make migrate` | Create / update tables (+ seed brands) |
+| `make loadgen` | Send signed events |
+| `make demo` | Guided end-to-end run |
+| `make test` | Tests (set `DATABASE_URL` for DB tests) |
 
 ## Docs
 
-- [Concepts](docs/concepts.md) — gamification / iGaming vocabulary
-- [Architecture](docs/architecture.md) — outbox, Kafka, retries, DLQ, ledger
+- [Simple concepts](docs/concepts.md)
+- [How it is built](docs/architecture.md)
