@@ -60,9 +60,10 @@ echo
 go run ./cmd/loadgen -url "$API_URL" -tenant nova-sports -secret "$NOVA_SECRET" -mode velocity -n 8
 echo
 
-echo "==> 4) Wait for outbox publish + worker rules (3s)"
+echo "==> 4) Wait for outbox publish + worker rules (8s)"
 echo "    Events are saved first, then pushed to the stream, then rules run."
-sleep 3
+echo "    Waiting a bit longer so the background jobs can catch up."
+sleep 8
 echo
 
 echo "==> 5) Read acme player snapshot"
