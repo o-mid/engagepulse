@@ -61,6 +61,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 		var evt domain.Event
 		if err := json.Unmarshal(msg.Value, &evt); err != nil {
 			c.logger.Error("unmarshal event", "err", err)
+			// Unreadable payloads will never succeed — park a stub in the DLQ and move on.
 			if c.dlq != nil {
 				_ = c.dlq.PublishDLQ(ctx, domain.Event{EventID: "unmarshal"}, err.Error(), 1)
 			}
@@ -72,7 +73,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 
 		if err := c.processEvent(ctx, evt); err != nil {
 			c.logger.Error("process event", "event_id", evt.EventID, "err", err)
-			// Do not commit: leave message for redelivery if DLQ itself failed.
+			// DLQ publish failed: keep the offset uncommitted so Kafka can redeliver.
 			continue
 		}
 
@@ -82,7 +83,8 @@ func (c *Consumer) Run(ctx context.Context) error {
 	}
 }
 
-// processEvent returns nil only when the message is safe to commit (handler OK or DLQ ack).
+// processEvent returns nil only when the offset is safe to commit:
+// handler succeeded, or retries exhausted and the DLQ write succeeded.
 func (c *Consumer) processEvent(ctx context.Context, evt domain.Event) error {
 	var lastErr error
 	attempts := c.maxAttempts

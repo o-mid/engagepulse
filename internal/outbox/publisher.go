@@ -57,6 +57,7 @@ func (p *Publisher) FlushOnce(ctx context.Context) error {
 }
 
 func (p *Publisher) flush(ctx context.Context) error {
+	// Crash between claim and mark-published leaves rows in "publishing"; reclaim first.
 	if err := p.store.ReclaimPublishingOutbox(ctx); err != nil {
 		return err
 	}
@@ -72,6 +73,7 @@ func (p *Publisher) flush(ctx context.Context) error {
 			continue
 		}
 		if err := p.kafka.Publish(ctx, evt); err != nil {
+			// Back to pending so the next tick retries; last_error keeps the reason.
 			_ = p.store.MarkOutboxPublishFailed(ctx, row.ID, err)
 			p.logger.Error("outbox publish", "event_id", evt.EventID, "err", err)
 			continue

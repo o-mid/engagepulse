@@ -34,6 +34,7 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 		return err
 	}
 
+	// processed_events is the at-least-once gate for rule side effects.
 	err := w.store.MarkProcessed(ctx, evt.TenantID, evt.PlayerID, evt.EventID, evt.Type)
 	if errors.Is(err, store.ErrDuplicateEvent) {
 		w.logger.Info("skip duplicate event", "event_id", evt.EventID, "tenant_id", evt.TenantID)
@@ -52,6 +53,7 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 	if err != nil {
 		return err
 	}
+	// Count includes this bet (just marked processed); rules expect "others in window".
 	if evt.Type == domain.EventBetPlaced && recentBets > 0 {
 		recentBets--
 	}
@@ -62,6 +64,7 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 	}
 
 	if res.CreditAmount > 0 {
+		// Ledger uniqueness is the last line of defence if processed_events is raced/replayed.
 		err := w.ledger.Credit(ctx, evt.TenantID, evt.PlayerID, evt.EventID, res.CreditReason, res.CreditAmount)
 		if errors.Is(err, ledger.ErrDuplicateCredit) {
 			w.logger.Info("skip duplicate credit", "event_id", evt.EventID)

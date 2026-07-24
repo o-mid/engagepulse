@@ -66,6 +66,7 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 
 	tenant, err := s.store.GetTenant(r.Context(), evt.TenantID)
 	if err != nil {
+		// Same status as bad HMAC — avoid cheap tenant-id probing.
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -75,14 +76,16 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
+	// Verify against the raw body bytes, not a re-marshalled JSON form.
 	if err := ingest.Verify(tenant.HMACSecret, sig, body); err != nil {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
+	// 202 means "durably accepted into the outbox", not "already on Kafka".
 	err = s.accept.EnqueueEvent(r.Context(), evt)
 	if errors.Is(err, store.ErrDuplicateEvent) {
-		// Idempotent retry: already durably accepted.
+		// Partner retried the same event_id; treat as success.
 		metrics.EventsIngested.Inc()
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)

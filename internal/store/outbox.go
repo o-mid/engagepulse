@@ -29,6 +29,8 @@ type OutboxRow struct {
 	CreatedAt time.Time
 }
 
+// EnqueueEvent is the durable accept path: player rows + outbox insert in one transaction.
+// Callers should 202 only after this returns nil (or ErrDuplicateEvent for idempotent retries).
 func (s *Store) EnqueueEvent(ctx context.Context, evt domain.Event) error {
 	payload, err := json.Marshal(evt)
 	if err != nil {
@@ -93,6 +95,8 @@ func (s *Store) ReclaimPublishingOutbox(ctx context.Context) error {
 	return err
 }
 
+// ClaimPendingOutbox flips a batch to "publishing". SKIP LOCKED keeps multiple claimers
+// from fighting over the same row if we ever run more than one publisher process.
 func (s *Store) ClaimPendingOutbox(ctx context.Context, limit int) ([]OutboxRow, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {

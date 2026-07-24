@@ -10,6 +10,7 @@ import (
 	kafkago "github.com/segmentio/kafka-go"
 )
 
+// DeadLetter is what ops would inspect later: original event + why processing gave up.
 type DeadLetter struct {
 	Event    domain.Event `json:"event"`
 	Error    string       `json:"error"`
@@ -21,6 +22,7 @@ type DLQPublisher interface {
 	PublishDLQ(ctx context.Context, evt domain.Event, reason string, attempts int) error
 }
 
+// PublishDLQ writes to this producer's topic (wired as player.events.dlq in app setup).
 func (p *Producer) PublishDLQ(ctx context.Context, evt domain.Event, reason string, attempts int) error {
 	body, err := json.Marshal(DeadLetter{
 		Event:    evt,

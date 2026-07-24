@@ -1,8 +1,10 @@
 # EngagePulse
 
-v0.1.0 — multi-tenant player engagement service for simulated iGaming brands.
+v0.1.0 — multi-tenant **player engagement** backend for simulated iGaming brands.
 
-Ingest signed player activity, apply a small rules set (welcome offer, VIP score, integrity velocity), and credit rewards once — even when Kafka redelivers.
+Partners send signed player activity (`deposit`, `bet_placed`, `session_heartbeat`). EngagePulse stores each event durably, publishes it on a Kafka stream, applies a small rules set (welcome offer, VIP score, integrity velocity), and credits rewards **once** — even when messages are redelivered.
+
+New to VIP / welcome offers / velocity flags? Start with [docs/concepts.md](docs/concepts.md).
 
 ## Quick start
 
@@ -30,6 +32,8 @@ make demo
 - Video (browser-playable): [engagepulse-demo-v0.1.0.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.0.mp4)
 - Asciinema source: [engagepulse-demo-v0.1.0.cast](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.0.cast) (`asciinema play engagepulse-demo-v0.1.0.cast`)
 
+> Recordings on the `v0.1.0` release show the happy path. After outbox + DLQ land on `develop`/`main`, re-record and attach updated assets (see release notes) so the video matches the current ingest path.
+
 Reproduce locally:
 
 ```bash
@@ -39,6 +43,19 @@ make run
 # other terminal:
 make demo
 ```
+
+## What you are looking at
+
+| Idea | In this repo |
+| --- | --- |
+| White-label brands | Tenants `acme-casino` and `nova-sports` |
+| Player activity stream | Kafka topic `player.events` (Redpanda locally) |
+| Safe accept under failure | Postgres **outbox**, then async publish |
+| Poison / repeated handler failures | Retries + DLQ topic `player.events.dlq` |
+| Welcome bonus | First deposit → tag + ledger credit 100 |
+| VIP status | Bet amounts raise score → bronze/silver/gold |
+| Integrity signal | Burst betting → `velocity` flag |
+| No double pay | Ledger unique `(tenant_id, event_id)` |
 
 ## Surfaces
 
@@ -60,12 +77,14 @@ make demo
 | `make demo` | End-to-end happy path |
 | `make test` | Unit + DB tests (set `DATABASE_URL`) |
 
-CI sets `DATABASE_URL` against a Postgres service so ledger and worker tests run in Actions.
+CI sets `DATABASE_URL` against a Postgres service and runs `go test ./... -p 1` so ledger/worker/outbox tests execute without parallel migrate races.
 
 ## Capability map
 
 | Capability | Where to look |
 | --- | --- |
+| Product concepts (VIP, offers, integrity) | [docs/concepts.md](docs/concepts.md) |
+| End-to-end architecture | [docs/architecture.md](docs/architecture.md) |
 | Multi-tenant isolation | `migrations/`, `internal/store`, API key middleware |
 | Signed ingest | `internal/ingest`, `POST /v1/events` |
 | Outbox publish | `internal/store/outbox.go`, `internal/outbox` |
@@ -78,4 +97,5 @@ CI sets `DATABASE_URL` against a Postgres service so ledger and worker tests run
 
 ## Docs
 
-- [Architecture](docs/architecture.md)
+- [Concepts](docs/concepts.md) — gamification / iGaming vocabulary
+- [Architecture](docs/architecture.md) — outbox, Kafka, retries, DLQ, ledger
