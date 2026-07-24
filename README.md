@@ -1,10 +1,8 @@
 # EngagePulse
 
-Small Go backend for **fake casino / sports brands**.
+Small Go backend for **casino / sports brands**.
 
 Other systems send player actions (deposit, bet). EngagePulse updates that player’s VIP status, welcome bonus, and warning flags, and may add a reward balance of **100** once.
-
-New here? Read [docs/concepts.md](docs/concepts.md) — short and plain.
 
 ## Quick start
 
@@ -32,11 +30,11 @@ make demo
 
 About 30 seconds of terminal output for `make demo` (two brands + player JSON + counters).
 
-**Latest release `v0.2.0`:**
+**Latest release `v0.2.1`:**
 
-- Video: [engagepulse-demo-v0.2.0.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.2.0/engagepulse-demo-v0.2.0.mp4)
-- Text recording: [engagepulse-demo-v0.2.0.cast](https://github.com/o-mid/engagepulse/releases/download/v0.2.0/engagepulse-demo-v0.2.0.cast)  
-  (`asciinema play engagepulse-demo-v0.2.0.cast`)
+- Video: [engagepulse-demo-v0.2.1.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.2.1/engagepulse-demo-v0.2.1.mp4)
+- Text recording: [engagepulse-demo-v0.2.1.cast](https://github.com/o-mid/engagepulse/releases/download/v0.2.1/engagepulse-demo-v0.2.1.cast)  
+  (`asciinema play engagepulse-demo-v0.2.1.cast`)
 
 Run it yourself:
 
