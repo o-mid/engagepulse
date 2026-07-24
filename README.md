@@ -1,12 +1,14 @@
 # EngagePulse
 
-v0.1.0 — multi-tenant player engagement service for simulated iGaming brands.
+Small Go backend for **fake casino / sports brands**.
 
-Ingest signed player activity, apply a small rules set (welcome offer, VIP score, integrity velocity), and credit rewards once — even when Kafka redelivers.
+Other systems send player actions (deposit, bet). EngagePulse updates that player’s VIP status, welcome bonus, and warning flags, and may add a reward balance of **100** once.
+
+New here? Read [docs/concepts.md](docs/concepts.md) — short and plain.
 
 ## Quick start
 
-Prefer local `make run` against Compose Postgres + Redpanda. The Compose app image may need `GOPROXY` if Docker cannot reach `proxy.golang.org`.
+Use the app on your machine. Start only Postgres + Redpanda in Docker:
 
 ```bash
 cp .env.example .env
@@ -21,16 +23,21 @@ In another terminal:
 make demo
 ```
 
-`make demo` sends traffic for both seed tenants and prints player snapshots (VIP / integrity / balance).
+`make demo` explains each step, sends traffic for two brands, then prints both player results.
 
-## Demo
+> If the Compose **app image** fails to build (module download blocked in Docker), that is fine. Local `make run` is the normal path.
 
-~30s terminal recording of `make demo`: acme VIP/welcome + nova velocity player snapshots, then `/metrics` ingest/process counts.
+## Demo video
 
-- Video (browser-playable): [engagepulse-demo-v0.1.0.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.0.mp4)
-- Asciinema source: [engagepulse-demo-v0.1.0.cast](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.0.cast) (`asciinema play engagepulse-demo-v0.1.0.cast`)
+About 30 seconds of terminal output for `make demo` (two brands + player JSON + counters).
 
-Reproduce locally:
+**Latest release `v0.2.0`:**
+
+- Video: [engagepulse-demo-v0.2.0.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.2.0/engagepulse-demo-v0.2.0.mp4)
+- Text recording: [engagepulse-demo-v0.2.0.cast](https://github.com/o-mid/engagepulse/releases/download/v0.2.0/engagepulse-demo-v0.2.0.cast)  
+  (`asciinema play engagepulse-demo-v0.2.0.cast`)
+
+Run it yourself:
 
 ```bash
 docker compose up -d postgres redpanda
@@ -40,41 +47,48 @@ make run
 make demo
 ```
 
-## Surfaces
+## What the demo brands show
 
-| Surface | Path |
+| Brand | Meant to show | Look for |
+| --- | --- | --- |
+| `acme-casino` | Welcome bonus + VIP going up | `welcome_bonus`, VIP `silver` or `gold`, `balance: 100` |
+| `nova-sports` | Betting too fast | `welcome_bonus`, `integrity_flag: velocity`, `balance: 100` |
+
+## Plain map of ideas → code
+
+| Idea | Where |
 | --- | --- |
-| Ingest | `POST /v1/events` (HMAC `X-Signature`) |
-| Player read | `GET /v1/players/{id}` (`X-API-Key`) |
-| gRPC | `GetPlayer` (metadata `x-api-key`) |
+| Words like VIP / welcome / velocity | [docs/concepts.md](docs/concepts.md) |
+| How messages move through the app | [docs/architecture.md](docs/architecture.md) |
+| Two brands, separate data | `migrations/`, `internal/store` |
+| Signed event intake | `internal/ingest`, `POST /v1/events` |
+| Save first, send to stream later | `internal/store/outbox.go`, `internal/outbox` |
+| Message stream + failed-message topic | `internal/kafka` |
+| The three rules | `internal/rules` |
+| Bonus credit without double-pay | `internal/ledger` |
+| Read player over HTTP / gRPC | `internal/api/httpapi`, `internal/api/grpcapi` |
+
+## HTTP / gRPC surfaces
+
+| What | Path |
+| --- | --- |
+| Send event | `POST /v1/events` (header `X-Signature`) |
+| Read player | `GET /v1/players/{id}` (header `X-API-Key`) |
+| Read player (gRPC) | `GetPlayer` (metadata `x-api-key`) |
 | Health | `GET /healthz` |
-| Metrics | `GET /metrics` |
+| Counters | `GET /metrics` |
 
-## Local tooling
+## Make targets
 
-| Command | Purpose |
+| Command | What it does |
 | --- | --- |
-| `make up` | Postgres + Redpanda |
-| `make migrate` / `make seed` | Schema + seed tenants |
-| `make loadgen` | Signed event traffic |
-| `make demo` | End-to-end happy path |
-| `make test` | Unit + DB tests (set `DATABASE_URL`) |
-
-CI sets `DATABASE_URL` against a Postgres service so ledger and worker tests run in Actions.
-
-## Capability map
-
-| Capability | Where to look |
-| --- | --- |
-| Multi-tenant isolation | `migrations/`, `internal/store`, API key middleware |
-| Signed ingest | `internal/ingest`, `POST /v1/events` |
-| Event stream | `internal/kafka`, Compose Redpanda |
-| Rules / scoring / integrity | `internal/rules` |
-| Ledger-safe credits | `internal/ledger`, unique `(tenant_id, event_id)` |
-| REST + gRPC reads | `internal/api/httpapi`, `internal/api/grpcapi` |
-| Observability | structured logs in `internal/app`, `/metrics` |
-| Local demo | `make demo`, `cmd/loadgen`, `scripts/demo.sh` |
+| `make up` | Start Postgres + Redpanda |
+| `make migrate` | Create / update tables (+ seed brands) |
+| `make loadgen` | Send signed events |
+| `make demo` | Guided end-to-end run |
+| `make test` | Tests (set `DATABASE_URL` for DB tests) |
 
 ## Docs
 
-- [Architecture](docs/architecture.md)
+- [Simple concepts](docs/concepts.md)
+- [How it is built](docs/architecture.md)

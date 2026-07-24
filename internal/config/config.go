@@ -8,24 +8,26 @@ import (
 )
 
 type Config struct {
-	HTTPAddr     string
-	GRPCAddr     string
-	DatabaseURL  string
-	KafkaBrokers []string
-	KafkaTopic   string
-	LogLevel     string
-	ShutdownTTL  time.Duration
+	HTTPAddr      string
+	GRPCAddr      string
+	DatabaseURL   string
+	KafkaBrokers  []string
+	KafkaTopic    string
+	KafkaDLQTopic string
+	LogLevel      string
+	ShutdownTTL   time.Duration
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		HTTPAddr:     env("HTTP_ADDR", ":8080"),
-		GRPCAddr:     env("GRPC_ADDR", ":9090"),
-		DatabaseURL:  strings.TrimSpace(os.Getenv("DATABASE_URL")),
-		KafkaBrokers: splitCSV(env("KAFKA_BROKERS", "localhost:19092")),
-		KafkaTopic:   strings.TrimSpace(env("KAFKA_TOPIC", "player.events")),
-		LogLevel:     env("LOG_LEVEL", "info"),
-		ShutdownTTL:  10 * time.Second,
+		HTTPAddr:      env("HTTP_ADDR", ":8080"),
+		GRPCAddr:      env("GRPC_ADDR", ":9090"),
+		DatabaseURL:   strings.TrimSpace(os.Getenv("DATABASE_URL")),
+		KafkaBrokers:  splitCSV(env("KAFKA_BROKERS", "localhost:19092")),
+		KafkaTopic:    strings.TrimSpace(env("KAFKA_TOPIC", "player.events")),
+		KafkaDLQTopic: strings.TrimSpace(env("KAFKA_DLQ_TOPIC", "player.events.dlq")),
+		LogLevel:      env("LOG_LEVEL", "info"),
+		ShutdownTTL:   10 * time.Second,
 	}
 	if cfg.DatabaseURL == "" {
 		cfg.DatabaseURL = "postgres://engagepulse:engagepulse@localhost:5432/engagepulse?sslmode=disable"
@@ -51,6 +53,9 @@ func (c Config) Validate() error {
 	}
 	if strings.TrimSpace(c.KafkaTopic) == "" {
 		return fmt.Errorf("KAFKA_TOPIC is required")
+	}
+	if strings.TrimSpace(c.KafkaDLQTopic) == "" {
+		return fmt.Errorf("KAFKA_DLQ_TOPIC is required")
 	}
 	return nil
 }

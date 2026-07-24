@@ -17,6 +17,7 @@ import (
 	"github.com/o-mid/engagepulse/internal/api/httpapi"
 	"github.com/o-mid/engagepulse/internal/config"
 	"github.com/o-mid/engagepulse/internal/kafka"
+	"github.com/o-mid/engagepulse/internal/outbox"
 	"github.com/o-mid/engagepulse/internal/store"
 	"github.com/o-mid/engagepulse/internal/worker"
 )
@@ -53,14 +54,20 @@ func (a *App) Run(ctx context.Context) error {
 		return fmt.Errorf("migrate: %w", err)
 	}
 
+	// Normal events and failed-event copies use two different Kafka topics.
 	pub := kafka.NewProducer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic)
 	defer func() { _ = pub.Close() }()
 
+	dlq := kafka.NewProducer(a.cfg.KafkaBrokers, a.cfg.KafkaDLQTopic)
+	defer func() { _ = dlq.Close() }()
+
+	outboxPub := outbox.NewPublisher(a.store, pub, a.logger)
+
 	w := worker.New(a.store, a.logger)
-	consumer := kafka.NewConsumer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic, "engagepulse-workers", a.logger, w.Handle)
+	consumer := kafka.NewConsumer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic, "engagepulse-workers", a.logger, w.Handle, dlq)
 	defer func() { _ = consumer.Close() }()
 
-	api := httpapi.New(a.store, pub, a.logger)
+	api := httpapi.New(a.store, a.store, a.logger)
 	srv := &http.Server{
 		Addr:              a.cfg.HTTPAddr,
 		Handler:           api.Handler(),
@@ -74,7 +81,7 @@ func (a *App) Run(ctx context.Context) error {
 		return fmt.Errorf("listen grpc: %w", err)
 	}
 
-	errCh := make(chan error, 3)
+	errCh := make(chan error, 4)
 	go func() {
 		a.logger.Info("http listening", "addr", a.cfg.HTTPAddr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -88,6 +95,11 @@ func (a *App) Run(ctx context.Context) error {
 		}
 	}()
 	go func() {
+		if err := outboxPub.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			errCh <- err
+		}
+	}()
+	go func() {
 		if err := consumer.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			errCh <- err
 		}
@@ -97,6 +109,7 @@ func (a *App) Run(ctx context.Context) error {
 		"http_addr", a.cfg.HTTPAddr,
 		"grpc_addr", a.cfg.GRPCAddr,
 		"kafka_topic", a.cfg.KafkaTopic,
+		"kafka_dlq_topic", a.cfg.KafkaDLQTopic,
 	)
 
 	select {

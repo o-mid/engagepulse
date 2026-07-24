@@ -9,8 +9,25 @@ import (
 	"github.com/o-mid/engagepulse/migrations"
 )
 
+// migrateLockKey is a stable Postgres advisory lock id for schema migrations.
+const migrateLockKey int64 = 722451901334221
+
 func (s *Store) Migrate(ctx context.Context) error {
-	_, err := s.pool.Exec(ctx, `
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire migrate conn: %w", err)
+	}
+	defer conn.Release()
+
+	// Session-scoped lock: concurrent Migrate callers wait instead of racing DDL.
+	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock($1)`, migrateLockKey); err != nil {
+		return fmt.Errorf("migrate lock: %w", err)
+	}
+	defer func() {
+		_, _ = conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1)`, migrateLockKey)
+	}()
+
+	_, err = conn.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			filename TEXT PRIMARY KEY,
 			applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -39,7 +56,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 
 	for _, name := range names {
 		var exists bool
-		if err := s.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE filename=$1)`, name).Scan(&exists); err != nil {
+		if err := conn.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE filename=$1)`, name).Scan(&exists); err != nil {
 			return err
 		}
 		if exists {
@@ -49,7 +66,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		tx, err := s.pool.Begin(ctx)
+		tx, err := conn.Begin(ctx)
 		if err != nil {
 			return err
 		}
