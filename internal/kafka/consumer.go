@@ -82,8 +82,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 	}
 }
 
-// processEvent retries the handler, then routes exhausted failures to the DLQ.
-// Returns nil only when the message is safe to commit (success or DLQ ack).
+// processEvent returns nil only when the message is safe to commit (handler OK or DLQ ack).
 func (c *Consumer) processEvent(ctx context.Context, evt domain.Event) error {
 	var lastErr error
 	attempts := c.maxAttempts
