@@ -27,7 +27,8 @@ make demo
 
 ~30s terminal recording of `make demo`: acme VIP/welcome + nova velocity player snapshots, then `/metrics` ingest/process counts.
 
-[engagepulse-demo-v0.1.0.cast](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.0.cast) (asciinema; play with `asciinema play engagepulse-demo-v0.1.0.cast`)
+- Video (browser-playable): [engagepulse-demo-v0.1.0.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.0.mp4)
+- Asciinema source: [engagepulse-demo-v0.1.0.cast](https://github.com/o-mid/engagepulse/releases/download/v0.1.0/engagepulse-demo-v0.1.0.cast) (`asciinema play engagepulse-demo-v0.1.0.cast`)
 
 Reproduce locally:
 
