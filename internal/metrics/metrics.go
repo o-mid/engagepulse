@@ -25,6 +25,14 @@ var (
 		Name: "engagepulse_ledger_credits_total",
 		Help: "Successful ledger credit operations",
 	})
+	ConsumerRetries = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "engagepulse_consumer_retries_total",
+		Help: "Consumer handler retry attempts after failure",
+	})
+	ConsumerDLQ = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "engagepulse_consumer_dlq_total",
+		Help: "Events routed to the dead-letter topic after exhausted retries",
+	})
 )
 
 func Handler() http.Handler {

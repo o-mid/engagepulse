@@ -8,28 +8,38 @@ import (
 	"time"
 
 	"github.com/o-mid/engagepulse/internal/domain"
+	"github.com/o-mid/engagepulse/internal/metrics"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
 type EventHandler func(ctx context.Context, evt domain.Event) error
 
+const (
+	defaultMaxAttempts = 3
+	defaultBackoff     = 50 * time.Millisecond
+)
+
 type Consumer struct {
-	reader  *kafkago.Reader
-	logger  *slog.Logger
-	handler EventHandler
+	reader      *kafkago.Reader
+	logger      *slog.Logger
+	handler     EventHandler
+	maxAttempts int
+	backoff     time.Duration
 }
 
 func NewConsumer(brokers []string, topic, group string, logger *slog.Logger, handler EventHandler) *Consumer {
 	return &Consumer{
-		logger:  logger,
-		handler: handler,
+		logger:      logger,
+		handler:     handler,
+		maxAttempts: defaultMaxAttempts,
+		backoff:     defaultBackoff,
 		reader: kafkago.NewReader(kafkago.ReaderConfig{
 			Brokers:        brokers,
 			Topic:          topic,
 			GroupID:        group,
 			MinBytes:       1,
 			MaxBytes:       10e6,
-			CommitInterval: time.Second,
+			CommitInterval: 0,
 			StartOffset:    kafkago.FirstOffset,
 		}),
 	}
@@ -49,12 +59,14 @@ func (c *Consumer) Run(ctx context.Context) error {
 		var evt domain.Event
 		if err := json.Unmarshal(msg.Value, &evt); err != nil {
 			c.logger.Error("unmarshal event", "err", err)
-			_ = c.reader.CommitMessages(ctx, msg)
+			if err := c.reader.CommitMessages(ctx, msg); err != nil {
+				return fmt.Errorf("commit poison message: %w", err)
+			}
 			continue
 		}
 
-		if err := c.handler(ctx, evt); err != nil {
-			c.logger.Error("handle event", "event_id", evt.EventID, "err", err)
+		if err := c.processEvent(ctx, evt); err != nil {
+			c.logger.Error("process event", "event_id", evt.EventID, "err", err)
 			continue
 		}
 
@@ -62,6 +74,31 @@ func (c *Consumer) Run(ctx context.Context) error {
 			return fmt.Errorf("commit message: %w", err)
 		}
 	}
+}
+
+func (c *Consumer) processEvent(ctx context.Context, evt domain.Event) error {
+	var lastErr error
+	attempts := c.maxAttempts
+	if attempts < 1 {
+		attempts = 1
+	}
+	for attempt := 1; attempt <= attempts; attempt++ {
+		err := c.handler(ctx, evt)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		c.logger.Error("handle event", "event_id", evt.EventID, "attempt", attempt, "err", err)
+		if attempt < attempts {
+			metrics.ConsumerRetries.Inc()
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(c.backoff * time.Duration(attempt)):
+			}
+		}
+	}
+	return fmt.Errorf("handler failed after %d attempts: %w", attempts, lastErr)
 }
 
 func (c *Consumer) Close() error {
