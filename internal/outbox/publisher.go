@@ -57,6 +57,9 @@ func (p *Publisher) FlushOnce(ctx context.Context) error {
 }
 
 func (p *Publisher) flush(ctx context.Context) error {
+	if err := p.store.ReclaimPublishingOutbox(ctx); err != nil {
+		return err
+	}
 	rows, err := p.store.ClaimPendingOutbox(ctx, p.batch)
 	if err != nil {
 		return err

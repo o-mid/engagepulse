@@ -82,6 +82,17 @@ func ensurePlayerTx(ctx context.Context, tx pgx.Tx, tenantID, playerID string) e
 	return err
 }
 
+// ReclaimPublishingOutbox returns rows left in publishing after a crash back to pending.
+// Safe with a single in-process publisher.
+func (s *Store) ReclaimPublishingOutbox(ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE outbox
+		SET status = $1, last_error = 'reclaimed stale publish'
+		WHERE status = $2
+	`, OutboxPending, OutboxPublishing)
+	return err
+}
+
 func (s *Store) ClaimPendingOutbox(ctx context.Context, limit int) ([]OutboxRow, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
