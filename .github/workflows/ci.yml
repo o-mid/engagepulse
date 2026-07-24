@@ -49,6 +49,8 @@ jobs:
           for i in $(seq 1 40); do
             if docker exec redpanda rpk cluster health 2>/dev/null | grep -q Healthy; then
               echo "Redpanda healthy"
+              docker exec redpanda rpk topic create player.events -p 1 -r 1 || true
+              docker exec redpanda rpk topic create player.events.dlq -p 1 -r 1 || true
               exit 0
             fi
             sleep 2
