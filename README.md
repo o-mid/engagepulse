@@ -6,9 +6,11 @@ Ingest signed player activity, apply a small rules set (welcome offer, VIP score
 
 ## Quick start
 
+Prefer local `make run` against Compose Postgres + Redpanda. The Compose app image may need `GOPROXY` if Docker cannot reach `proxy.golang.org`.
+
 ```bash
 cp .env.example .env
-docker compose up -d
+docker compose up -d postgres redpanda
 make migrate
 make run
 ```
@@ -39,9 +41,9 @@ make demo
 | `make migrate` / `make seed` | Schema + seed tenants |
 | `make loadgen` | Signed event traffic |
 | `make demo` | End-to-end happy path |
-| `make test` | Unit + optional DB tests |
+| `make test` | Unit + DB tests (set `DATABASE_URL`) |
 
-Set `DATABASE_URL` to run ledger and worker integration tests against Postgres.
+CI sets `DATABASE_URL` against a Postgres service so ledger and worker tests run in Actions.
 
 ## Capability map
 

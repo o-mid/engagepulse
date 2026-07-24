@@ -10,6 +10,8 @@ The interesting parts are the event contract, idempotent processing, and ledger 
 
 Ingest acknowledges after the event is on the stream. The worker can retry, catch up after restarts, and process bursts without coupling HTTP latency to rule evaluation. Redpanda keeps local Compose small while preserving the Kafka protocol.
 
+On handler errors the consumer currently logs and continues without committing; retry-with-backoff and a DLQ are the deliberate next step, not silent skip-as-success.
+
 ## Why ledger keys are `(tenant_id, event_id)`
 
 Reward credits must survive redelivery. Unique ledger keys make duplicate Kafka deliveries a no-op at the money path even if application-level dedupe is skipped or raced.
