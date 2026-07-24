@@ -81,6 +81,9 @@ Locally, **Redpanda** is a smaller tool that speaks the same Kafka style of API.
 
 If the app crashes while sending, rows stuck as “publishing” are put back to “pending” and tried again.
 
+The gauge `engagepulse_outbox_pending` shows how many rows are still waiting (or mid-send).
+The demo script waits until that gauge is `0` and processed events catch up to accepted ones before printing player JSON.
+
 Code: `internal/store/outbox.go`, `internal/outbox/publisher.go`.
 
 ## Retries and the dead-letter topic (DLQ)

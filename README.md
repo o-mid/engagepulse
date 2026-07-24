@@ -8,7 +8,8 @@ New here? Read [docs/concepts.md](docs/concepts.md) — short and plain.
 
 ## Quick start
 
-Use the app on your machine. Start only Postgres + Redpanda in Docker:
+Use the app on your machine. Start only Postgres + Redpanda in Docker.
+The app listens on `127.0.0.1` by default (avoids `localhost` → IPv6 confusion).
 
 ```bash
 cp .env.example .env

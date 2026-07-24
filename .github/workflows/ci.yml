@@ -25,11 +25,39 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://engagepulse:engagepulse@localhost:5432/engagepulse?sslmode=disable
+      KAFKA_BROKERS: localhost:19092
+      KAFKA_TOPIC: player.events
+      KAFKA_DLQ_TOPIC: player.events.dlq
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22.x"
+      - name: Start Redpanda
+        run: |
+          docker run -d --name redpanda --network host \
+            redpandadata/redpanda:v24.2.4 \
+            redpanda start \
+            --overprovisioned \
+            --smp 1 \
+            --memory 512M \
+            --reserve-memory 0M \
+            --node-id 0 \
+            --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092 \
+            --advertise-kafka-addr internal://127.0.0.1:9092,external://127.0.0.1:19092 \
+            --set redpanda.auto_create_topics_enabled=true
+          for i in $(seq 1 40); do
+            if docker exec redpanda rpk cluster health 2>/dev/null | grep -q Healthy; then
+              echo "Redpanda healthy"
+              docker exec redpanda rpk topic create player.events -p 1 -r 1 || true
+              docker exec redpanda rpk topic create player.events.dlq -p 1 -r 1 || true
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Redpanda failed to become healthy"
+          docker logs redpanda || true
+          exit 1
       - name: Format check
         run: test -z "$(gofmt -l .)"
       - name: Vet

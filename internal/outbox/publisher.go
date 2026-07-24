@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/o-mid/engagepulse/internal/domain"
+	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/store"
 )
 
@@ -30,7 +31,7 @@ func NewPublisher(st *store.Store, kafka EventPublisher, logger *slog.Logger) *P
 		store:    st,
 		kafka:    kafka,
 		logger:   logger,
-		interval: 500 * time.Millisecond,
+		interval: 100 * time.Millisecond,
 		batch:    50,
 	}
 }
@@ -56,7 +57,16 @@ func (p *Publisher) FlushOnce(ctx context.Context) error {
 	return p.flush(ctx)
 }
 
+func (p *Publisher) refreshPendingMetric(ctx context.Context) {
+	n, err := p.store.CountOutboxBacklog(ctx)
+	if err != nil {
+		return
+	}
+	metrics.OutboxPending.Set(float64(n))
+}
+
 func (p *Publisher) flush(ctx context.Context) error {
+	p.refreshPendingMetric(ctx)
 	// If we crashed mid-send, put half-finished rows back to pending.
 	if err := p.store.ReclaimPublishingOutbox(ctx); err != nil {
 		return err
@@ -82,5 +92,6 @@ func (p *Publisher) flush(ctx context.Context) error {
 			return err
 		}
 	}
+	p.refreshPendingMetric(ctx)
 	return nil
 }
