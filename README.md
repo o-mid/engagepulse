@@ -28,15 +28,24 @@ make demo
 
 ## Demo video
 
-About 30 seconds of terminal output for `make demo` (two brands + player JSON + counters).
+**Latest release `v0.3.0` — web console (Pulse Arena):**
 
-**Latest release `v0.2.1`:**
+| Clip | What you see |
+| --- | --- |
+| [Arena guided demo (mp4)](https://github.com/o-mid/engagepulse/releases/download/v0.3.0/engagepulse-web-arena-v0.3.0.mp4) | Ignite → Acme VIP + Nova velocity payoff |
+| [Architecture live (mp4)](https://github.com/o-mid/engagepulse/releases/download/v0.3.0/engagepulse-web-architecture-v0.3.0.mp4) | Event-path diagram + live metrics poll |
+| [Full tour (mp4)](https://github.com/o-mid/engagepulse/releases/download/v0.3.0/engagepulse-web-tour-v0.3.0.mp4) | Arena run then Architecture page |
+| [Arena preview (gif)](https://github.com/o-mid/engagepulse/releases/download/v0.3.0/engagepulse-web-arena-v0.3.0.gif) | Short silent preview |
+
+Posters: [arena](https://github.com/o-mid/engagepulse/releases/download/v0.3.0/engagepulse-web-arena-v0.3.0.jpg) · [architecture](https://github.com/o-mid/engagepulse/releases/download/v0.3.0/engagepulse-web-architecture-v0.3.0.jpg)
+
+**CLI demo** (still on `v0.2.1`):
 
 - Video: [engagepulse-demo-v0.2.1.mp4](https://github.com/o-mid/engagepulse/releases/download/v0.2.1/engagepulse-demo-v0.2.1.mp4)
 - Text recording: [engagepulse-demo-v0.2.1.cast](https://github.com/o-mid/engagepulse/releases/download/v0.2.1/engagepulse-demo-v0.2.1.cast)  
   (`asciinema play engagepulse-demo-v0.2.1.cast`)
 
-Run it yourself:
+Run the CLI demo yourself:
 
 ```bash
 docker compose up -d postgres redpanda
@@ -87,7 +96,21 @@ make demo
 | `make demo` | Guided end-to-end run |
 | `make test` | Tests (set `DATABASE_URL` for DB tests) |
 
+## Web console
+
+Creative dual-tenant arena UI in `web/` — Next.js BFF over the live Go API.
+
+```bash
+# with API already up via make run
+cd web && npm install && npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) and click **Ignite live demo**.
+
+See [web/README.md](web/README.md) for pages, env vars, and free ways to share or host online.
+
 ## Docs
 
 - [Simple concepts](docs/concepts.md)
 - [How it is built](docs/architecture.md)
+- [Web console](web/README.md)

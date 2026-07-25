@@ -23,3 +23,10 @@ vendor/
 # Coverage
 coverage.out
 coverage.html
+
+# Frontend
+web/node_modules/
+web/.next/
+web/out/
+web/.env.local
+.tmp-demo/
