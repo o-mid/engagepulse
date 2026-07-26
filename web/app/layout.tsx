@@ -31,6 +31,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${syne.variable} ${plex.variable} antialiased`}>
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-[var(--copper)] focus:px-3 focus:py-2 focus:text-sm focus:text-[var(--ink)]"
+        >
+          Skip to content
+        </a>
         {children}
       </body>
     </html>

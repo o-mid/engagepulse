@@ -201,6 +201,7 @@ export function PulseTheater() {
       <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-14 pt-5 md:px-8">
         <SiteNav />
 
+        <main id="main" className="flex flex-1 flex-col">
         <motion.div
           className="mt-4 flex flex-wrap items-center justify-between gap-3"
           initial={{ opacity: 0, y: -8 }}
@@ -223,7 +224,7 @@ export function PulseTheater() {
           </div>
         </motion.div>
 
-        <nav className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <header className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
             <p className="mono text-[11px] uppercase tracking-[0.35em] text-[var(--fog-mute)]">
               engagepulse · live arena
@@ -270,7 +271,7 @@ export function PulseTheater() {
               </p>
             )}
           </div>
-        </nav>
+        </header>
 
         <div className="mt-7 flex flex-wrap items-center gap-3">
           <motion.button
@@ -423,6 +424,7 @@ export function PulseTheater() {
             </motion.p>
           ) : null}
         </AnimatePresence>
+        </main>
       </div>
     </div>
   );

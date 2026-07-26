@@ -130,6 +130,7 @@ export function ArchitectureLive() {
       <div className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-5 md:px-8">
         <SiteNav />
 
+        <main id="main">
         <header className="mt-8 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
             <p className="mono text-[11px] uppercase tracking-[0.3em] text-[var(--fog-mute)]">
@@ -406,6 +407,7 @@ export function ArchitectureLive() {
             </p>
           </div>
         </section>
+        </main>
       </div>
     </div>
   );
