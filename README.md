@@ -87,7 +87,19 @@ make demo
 | `make demo` | Guided end-to-end run |
 | `make test` | Tests (set `DATABASE_URL` for DB tests) |
 
+## Web console
+
+Creative dual-tenant arena UI in `web/` — Next.js BFF over the live Go API.
+
+```bash
+# with API already up via make run
+cd web && npm install && npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) and click **Ignite live demo**.
+
 ## Docs
 
 - [Simple concepts](docs/concepts.md)
 - [How it is built](docs/architecture.md)
+- [Web console](web/README.md)
