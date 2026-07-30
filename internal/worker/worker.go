@@ -19,6 +19,9 @@ type Worker struct {
 	ledger *ledger.Ledger
 	rules  *rules.Engine
 	logger *slog.Logger
+
+	// failAfterMark aborts the tx after the processed-event insert (tests).
+	failAfterMark error
 }
 
 func New(st *store.Store, logger *slog.Logger) *Worker {
@@ -49,6 +52,9 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 		}
 		if err != nil {
 			return err
+		}
+		if w.failAfterMark != nil {
+			return w.failAfterMark
 		}
 
 		st, err := w.store.GetPlayerStateTx(ctx, tx, evt.TenantID, evt.PlayerID)
