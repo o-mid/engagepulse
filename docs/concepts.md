@@ -80,8 +80,8 @@ We still treat it carefully: the same event must never pay the bonus twice.
 1. Brand sends a signed event to `POST /v1/events`.
 2. App saves it in the database first (outbox table).
 3. A background job puts it on the message stream (Kafka / Redpanda).
-4. A worker reads it and runs the three rules.
-5. You read the player with `GET /v1/players/{id}` (API key required).
+4. A worker reads it and runs the three rules — mark, state, and bonus credit commit together.
+5. You read the player with `GET /v1/players/{id}` (API key required; only that brand’s players).
 
 ## What “good” looks like in `make demo`
 

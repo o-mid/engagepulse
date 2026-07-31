@@ -47,10 +47,11 @@ Kafka consumer (background)
    - if still failing: send copy to player.events.dlq, then move on
    |
    v
-Worker
+Worker (one DB transaction)
    - remember event id (skip if seen)
    - run welcome → VIP → velocity rules
    - maybe add bonus credit
+   - commit mark + state + credit together
    |
    v
 GET /v1/players/{id}  or  gRPC GetPlayer
@@ -109,6 +110,19 @@ The stream may deliver the same event more than once.
 The bonus table has a unique key on `(tenant_id, event_id)`.
 A second credit for the same event is rejected, so the balance does not jump by another 100.
 
+## Worker writes in one transaction
+
+**Problem:** if we mark an event “processed” and then die before saving player state or the bonus credit, a retry sees the mark and skips the rest forever.
+
+**What we do:**
+
+1. Open one Postgres transaction.
+2. Ensure player rows, mark processed, update state, and credit the ledger inside that transaction.
+3. Commit only when all of those steps succeed.
+4. If anything fails, roll back — including the processed mark — so Kafka retries can run the full path again.
+
+Code: `internal/worker/worker.go`, `internal/store` `*Tx` helpers, `internal/ledger.CreditTx`.
+
 ## Rules order
 
 Always:
@@ -128,6 +142,7 @@ Details: [concepts.md](./concepts.md). Code: `internal/rules`.
 | gRPC `GetPlayer` | metadata `x-api-key` |
 
 Unknown brand and bad signature both return **401** (same answer on purpose).
+A player id that exists for another brand returns **404** for your API key (no cross-brand leak).
 
 Demo brands and keys are only for local use (see `.env.example`).
 
@@ -136,6 +151,12 @@ Demo brands and keys are only for local use (see `.env.example`).
 Several test packages talk to the same Postgres.
 `Migrate` takes a database lock so they do not fight while creating tables.
 CI also runs tests one package at a time (`go test ./... -p 1`).
+
+Useful coverage for this path:
+
+- worker rollback if processing fails after the mark (`internal/worker`)
+- bad HMAC / unknown tenant → 401, cross-tenant player read → 404 (`internal/api/httpapi`)
+- ledger credit-once under concurrent delivery (`internal/ledger`)
 
 ## Not in this project
 
