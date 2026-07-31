@@ -20,8 +20,16 @@ type PlayerState struct {
 }
 
 func (s *Store) GetPlayerState(ctx context.Context, tenantID, playerID string) (PlayerState, error) {
+	return getPlayerState(ctx, s.pool, tenantID, playerID)
+}
+
+func (s *Store) GetPlayerStateTx(ctx context.Context, tx pgx.Tx, tenantID, playerID string) (PlayerState, error) {
+	return getPlayerState(ctx, tx, tenantID, playerID)
+}
+
+func getPlayerState(ctx context.Context, q querier, tenantID, playerID string) (PlayerState, error) {
 	var st PlayerState
-	err := s.pool.QueryRow(ctx, `
+	err := q.QueryRow(ctx, `
 		SELECT tenant_id, player_id, score, vip_tier, offer_tags, integrity_flag, updated_at
 		FROM player_state
 		WHERE tenant_id=$1 AND player_id=$2
@@ -67,7 +75,15 @@ func (s *Store) GetPlayerSnapshot(ctx context.Context, tenantID, playerID string
 }
 
 func (s *Store) SavePlayerState(ctx context.Context, st PlayerState) error {
-	_, err := s.pool.Exec(ctx, `
+	return savePlayerState(ctx, s.pool, st)
+}
+
+func (s *Store) SavePlayerStateTx(ctx context.Context, tx pgx.Tx, st PlayerState) error {
+	return savePlayerState(ctx, tx, st)
+}
+
+func savePlayerState(ctx context.Context, q querier, st PlayerState) error {
+	_, err := q.Exec(ctx, `
 		UPDATE player_state
 		SET score=$3, vip_tier=$4, offer_tags=$5, integrity_flag=$6, updated_at=now()
 		WHERE tenant_id=$1 AND player_id=$2

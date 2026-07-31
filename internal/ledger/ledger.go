@@ -30,7 +30,22 @@ func (l *Ledger) Credit(ctx context.Context, tenantID, playerID, eventID, reason
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	_, err = tx.Exec(ctx, `
+	if err := credit(ctx, tx, tenantID, playerID, eventID, reason, amount); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// CreditTx applies the same credit using an open transaction (caller commits).
+func (l *Ledger) CreditTx(ctx context.Context, tx pgx.Tx, tenantID, playerID, eventID, reason string, amount int64) error {
+	if amount == 0 {
+		return nil
+	}
+	return credit(ctx, tx, tenantID, playerID, eventID, reason, amount)
+}
+
+func credit(ctx context.Context, tx pgx.Tx, tenantID, playerID, eventID, reason string, amount int64) error {
+	_, err := tx.Exec(ctx, `
 		INSERT INTO ledger_entries (tenant_id, player_id, event_id, amount, reason)
 		VALUES ($1, $2, $3, $4, $5)
 	`, tenantID, playerID, eventID, amount, reason)
@@ -53,8 +68,7 @@ func (l *Ledger) Credit(ctx context.Context, tenantID, playerID, eventID, reason
 	if ct.RowsAffected() == 0 {
 		return errors.New("balance row missing")
 	}
-
-	return tx.Commit(ctx)
+	return nil
 }
 
 func (l *Ledger) Balance(ctx context.Context, tenantID, playerID string) (int64, error) {

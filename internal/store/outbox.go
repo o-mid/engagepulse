@@ -43,7 +43,7 @@ func (s *Store) EnqueueEvent(ctx context.Context, evt domain.Event) error {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if err := ensurePlayerTx(ctx, tx, evt.TenantID, evt.PlayerID); err != nil {
+	if err := EnsurePlayerTx(ctx, tx, evt.TenantID, evt.PlayerID); err != nil {
 		return err
 	}
 
@@ -61,22 +61,26 @@ func (s *Store) EnqueueEvent(ctx context.Context, evt domain.Event) error {
 	return tx.Commit(ctx)
 }
 
-func ensurePlayerTx(ctx context.Context, tx pgx.Tx, tenantID, playerID string) error {
-	if _, err := tx.Exec(ctx, `
+func EnsurePlayerTx(ctx context.Context, tx pgx.Tx, tenantID, playerID string) error {
+	return ensurePlayer(ctx, tx, tenantID, playerID)
+}
+
+func ensurePlayer(ctx context.Context, q querier, tenantID, playerID string) error {
+	if _, err := q.Exec(ctx, `
 		INSERT INTO players (tenant_id, player_id)
 		VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
 	`, tenantID, playerID); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `
+	if _, err := q.Exec(ctx, `
 		INSERT INTO player_state (tenant_id, player_id)
 		VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
 	`, tenantID, playerID); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx, `
+	_, err := q.Exec(ctx, `
 		INSERT INTO balances (tenant_id, player_id)
 		VALUES ($1, $2)
 		ON CONFLICT DO NOTHING

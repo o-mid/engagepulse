@@ -72,9 +72,11 @@ make demo
 | Signed event intake | `internal/ingest`, `POST /v1/events` |
 | Save first, send to stream later | `internal/store/outbox.go`, `internal/outbox` |
 | Message stream + failed-message topic | `internal/kafka` |
+| Worker mark + state + credit in one DB tx | `internal/worker`, `internal/store`, `internal/ledger` |
 | The three rules | `internal/rules` |
 | Bonus credit without double-pay | `internal/ledger` |
 | Read player over HTTP / gRPC | `internal/api/httpapi`, `internal/api/grpcapi` |
+| HMAC / API-key / tenant isolation tests | `internal/api/httpapi/security_test.go` |
 
 ## HTTP / gRPC surfaces
 

@@ -39,26 +39,5 @@ func (s *Store) GetTenantByAPIKey(ctx context.Context, apiKey string) (Tenant, e
 }
 
 func (s *Store) EnsurePlayer(ctx context.Context, tenantID, playerID string) error {
-	_, err := s.pool.Exec(ctx, `
-		INSERT INTO players (tenant_id, player_id)
-		VALUES ($1, $2)
-		ON CONFLICT DO NOTHING
-	`, tenantID, playerID)
-	if err != nil {
-		return err
-	}
-	_, err = s.pool.Exec(ctx, `
-		INSERT INTO player_state (tenant_id, player_id)
-		VALUES ($1, $2)
-		ON CONFLICT DO NOTHING
-	`, tenantID, playerID)
-	if err != nil {
-		return err
-	}
-	_, err = s.pool.Exec(ctx, `
-		INSERT INTO balances (tenant_id, player_id)
-		VALUES ($1, $2)
-		ON CONFLICT DO NOTHING
-	`, tenantID, playerID)
-	return err
+	return ensurePlayer(ctx, s.pool, tenantID, playerID)
 }
