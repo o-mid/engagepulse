@@ -42,6 +42,12 @@ Pages:
 
 High-quality screen captures are attached to GitHub release **`v0.3.0`** (mp4 + posters). Links live in the root [README Demo video](../README.md#demo-video) section.
 
+## Live URL
+
+Production UI: [https://engagepulse-topaz.vercel.app](https://engagepulse-topaz.vercel.app)
+
+Set Vercel env `ENGAGEPULSE_URL` to a **public** Go API base URL (plus the demo tenant keys from `.env.local.example`). Ignite works only while that API is reachable. If it is down, the Arena shows an offline banner with a link to the recorded demo.
+
 ## See it online (free options)
 
 The UI is a Next.js BFF: it must reach a running EngagePulse API (`ENGAGEPULSE_URL`) with the demo tenant keys from `.env.local.example`. There is no fully static export that can run the live demo alone.

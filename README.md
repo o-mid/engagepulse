@@ -4,6 +4,12 @@ Small Go backend for **casino / sports brands**.
 
 Other systems send player actions (deposit, bet). EngagePulse updates that player’s VIP status, welcome bonus, and warning flags, and may add a reward balance of **100** once.
 
+## Live console
+
+**Try it:** [engagepulse-topaz.vercel.app](https://engagepulse-topaz.vercel.app) — open Pulse Arena and click **Ignite live demo**.
+
+Ignite needs the Go API online (Postgres + Kafka/Redpanda behind it). If the API is down, the console shows a clear offline banner and links to the [Arena demo mp4](https://github.com/o-mid/engagepulse/releases/download/v0.3.0/engagepulse-web-arena-v0.3.0.mp4).
+
 ## Quick start
 
 Use the app on your machine. Start only Postgres + Redpanda in Docker.
