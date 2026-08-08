@@ -42,49 +42,31 @@ Pages:
 
 High-quality screen captures are attached to GitHub release **`v0.3.0`** (mp4 + posters). Links live in the root [README Demo video](../README.md#demo-video) section.
 
-## Live URL
+## Live demo (already hosted)
 
-Production UI: [https://engagepulse-topaz.vercel.app](https://engagepulse-topaz.vercel.app)
+| Piece | URL |
+| --- | --- |
+| Pulse Arena UI | [https://engagepulse-topaz.vercel.app](https://engagepulse-topaz.vercel.app) |
+| Go API | `https://api-production-2ef9b.up.railway.app` |
 
-Set Vercel env `ENGAGEPULSE_URL` to a **public** Go API base URL (plus the demo tenant keys from `.env.local.example`). Current hosted API: `https://api-production-2ef9b.up.railway.app`. Stale tunnel URLs are ignored in favor of that hosted API. If the API is down, the Arena shows an offline banner with a link to the recorded demo.
+Open the Arena and click **Ignite live demo**. The BFF signs events server-side and talks to the Railway API (Postgres + Apache Kafka). Local Compose still uses Redpanda — same Kafka protocol.
 
-## See it online (free options)
+If the API is unreachable, the Arena and Architecture pages show an offline banner with a link to the recorded `v0.3.0` Arena mp4.
 
-The UI is a Next.js BFF: it must reach a running EngagePulse API (`ENGAGEPULSE_URL`) with the demo tenant keys from `.env.local.example`. There is no fully static export that can run the live demo alone.
+### Vercel env
 
-### 1) Watch without hosting
+Production UI expects:
 
-Open the `v0.3.0` release assets (Arena / Architecture / Tour mp4). No deploy required.
+| Variable | Value |
+| --- | --- |
+| `ENGAGEPULSE_URL` | `https://api-production-2ef9b.up.railway.app` |
+| `ACME_API_KEY` / `ACME_HMAC_SECRET` | demo keys from `.env.local.example` |
+| `NOVA_API_KEY` / `NOVA_HMAC_SECRET` | demo keys from `.env.local.example` |
 
-### 2) Quick share of your local stack (best free “live” path)
+Stale laptop tunnel URLs (`trycloudflare`, `ngrok`, etc.) in `ENGAGEPULSE_URL` are ignored; the BFF falls back to the hosted Railway API. On Vercel with no URL set, it also uses that hosted API.
 
-Keep Postgres + Redpanda + `make run` + `npm run dev` on your machine, then expose both ports with a tunnel:
+### Other ways to share
 
-```bash
-# example with Cloudflare Tunnel (free account)
-cloudflared tunnel --url http://127.0.0.1:3000
-```
-
-Share the printed `https://*.trycloudflare.com` URL.  
-If the browser UI calls the API through the BFF on `:3000`, one tunnel to the web app is enough (secrets stay on your machine).  
-Alternatives: [ngrok](https://ngrok.com/) or [localhost.run](https://localhost.run/).
-
-### 3) Free-host the web UI (Vercel)
-
-1. Push this repo (or connect the GitHub remote) to [Vercel](https://vercel.com/) → Import → set **Root Directory** to `web`.
-2. Add env vars from `.env.local.example`, but point `ENGAGEPULSE_URL` at a **public** API base URL (not `127.0.0.1`).
-3. Deploy. The Arena page will load; **Ignite live demo** only works when that API is reachable from Vercel’s servers.
-
-### 4) Free-host the Go API (harder piece)
-
-You need Postgres + a Kafka-compatible broker (this repo uses Redpanda in Compose).
-
-Practical free-tier path:
-
-1. **Postgres** — [Neon](https://neon.tech/) or [Supabase](https://supabase.com/) free DB → set `DATABASE_URL`.
-2. **Broker** — small Redpanda/Kafka on [Railway](https://railway.app/), [Render](https://render.com/), or [Fly.io](https://fly.io/) (free allowances change; expect to babysit sleep/idle limits).
-3. **API** — deploy the Go binary on Fly/Railway/Render with `HTTP_ADDR=0.0.0.0:8080`, your Kafka brokers, and the seeded tenant keys/secrets.
-4. Run migrations once against the hosted Postgres (`make migrate` with hosted `DATABASE_URL`).
-5. Point Vercel `ENGAGEPULSE_URL` at that API.
-
-If you only need a portfolio link for a day or two, prefer **option 2 (tunnel)** over fighting free Kafka hosting.
+1. **Watch recordings** — `v0.3.0` release mp4s (no deploy).
+2. **Local + tunnel** — run Postgres, Redpanda, `make run`, and `npm run dev`, then tunnel `:3000` (e.g. Cloudflare Tunnel) for a temporary share.
+3. **Re-host the API** — deploy the Go binary with `HTTP_ADDR=0.0.0.0:8080`, a Postgres `DATABASE_URL`, and Kafka brokers; point Vercel `ENGAGEPULSE_URL` at that base URL.
