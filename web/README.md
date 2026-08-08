@@ -46,7 +46,7 @@ High-quality screen captures are attached to GitHub release **`v0.3.0`** (mp4 + 
 
 Production UI: [https://engagepulse-topaz.vercel.app](https://engagepulse-topaz.vercel.app)
 
-Set Vercel env `ENGAGEPULSE_URL` to a **public** Go API base URL (plus the demo tenant keys from `.env.local.example`). Ignite works only while that API is reachable. If it is down, the Arena shows an offline banner with a link to the recorded demo.
+Set Vercel env `ENGAGEPULSE_URL` to a **public** Go API base URL (plus the demo tenant keys from `.env.local.example`). Current hosted API: `https://api-production-2ef9b.up.railway.app`. Stale tunnel URLs are ignored in favor of that hosted API. If the API is down, the Arena shows an offline banner with a link to the recorded demo.
 
 ## See it online (free options)
 
