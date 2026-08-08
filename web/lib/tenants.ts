@@ -36,6 +36,16 @@ export function getTenants(): Record<TenantId, TenantConfig> {
   };
 }
 
+/** Always-on Go API for the public console (Railway trial). */
+const HOSTED_API = "https://api-production-2ef9b.up.railway.app";
+
 export function apiBase(): string {
-  return process.env.ENGAGEPULSE_URL ?? "http://127.0.0.1:8080";
+  const configured = (process.env.ENGAGEPULSE_URL ?? "").trim().replace(/\/$/, "");
+  // Stale laptop tunnels break the public console — prefer the hosted API.
+  if (configured && /trycloudflare\.com|ngrok|\.localhost\.run/i.test(configured)) {
+    return HOSTED_API;
+  }
+  if (configured) return configured;
+  if (process.env.VERCEL) return HOSTED_API;
+  return "http://127.0.0.1:8080";
 }
