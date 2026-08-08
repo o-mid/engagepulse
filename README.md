@@ -8,7 +8,7 @@ Other systems send player actions (deposit, bet). EngagePulse updates that playe
 
 **Try it:** [engagepulse-topaz.vercel.app](https://engagepulse-topaz.vercel.app) — open Pulse Arena and click **Ignite live demo**.
 
-Ignite needs the Go API online (Postgres + Kafka behind it). Hosted API: `https://api-production-2ef9b.up.railway.app`. If the API is down, the console shows a clear offline banner and links to the [Arena demo mp4](https://github.com/o-mid/engagepulse/releases/download/v0.3.0/engagepulse-web-arena-v0.3.0.mp4).
+Ignite needs the Go API online (Postgres + a Kafka-compatible broker). The public demo API is already hosted: `https://api-production-2ef9b.up.railway.app` (Postgres + Apache Kafka on Railway; local Compose still uses Redpanda). If the API is down, the console shows a clear offline banner and links to the [Arena demo mp4](https://github.com/o-mid/engagepulse/releases/download/v0.3.0/engagepulse-web-arena-v0.3.0.mp4).
 
 ## Quick start
 
@@ -108,14 +108,19 @@ make demo
 
 Creative dual-tenant arena UI in `web/` — Next.js BFF over the live Go API.
 
+**Hosted:** [engagepulse-topaz.vercel.app](https://engagepulse-topaz.vercel.app) (points at the Railway API above).
+
+**Local UI** (API already up via `make run`):
+
 ```bash
-# with API already up via make run
 cd web && npm install && npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) and click **Ignite live demo**.
 
-See [web/README.md](web/README.md) for pages, env vars, and free ways to share or host online.
+See [web/README.md](web/README.md) for pages, env vars, and hosting notes.
+
+CI runs `gofmt`, `go vet`, `golangci-lint`, and `go test ./... -p 1` on `main` / `develop`.
 
 ## Docs
 
