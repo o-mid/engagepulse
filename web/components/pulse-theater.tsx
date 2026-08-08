@@ -12,6 +12,7 @@ import { TenantLane } from "@/components/tenant-lane";
 import {
   BEAT_CAPTION,
   BEAT_PLAIN,
+  DEMO_VIDEO_URL,
   acmeOutcome,
   novaOutcome,
   pickStoryEvents,
@@ -85,18 +86,30 @@ export function PulseTheater() {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const probe = async () => {
       try {
-        const res = await fetch("/api/metrics", { cache: "no-store" });
+        const [healthRes, metricsRes] = await Promise.all([
+          fetch("/api/health", { cache: "no-store" }),
+          fetch("/api/metrics", { cache: "no-store" }),
+        ]);
         if (!alive) return;
-        setApiOnline(res.ok);
-        if (res.ok) setLifetime((await res.json()) as MetricsMap);
+        const health = (await healthRes.json().catch(() => null)) as {
+          ok?: boolean;
+        } | null;
+        const online = !!health?.ok;
+        setApiOnline(online);
+        if (online && metricsRes.ok) {
+          setLifetime((await metricsRes.json()) as MetricsMap);
+        }
       } catch {
         if (alive) setApiOnline(false);
       }
-    })();
+    };
+    void probe();
+    const id = window.setInterval(probe, 15_000);
     return () => {
       alive = false;
+      window.clearInterval(id);
     };
   }, []);
 
@@ -202,6 +215,33 @@ export function PulseTheater() {
         <SiteNav />
 
         <main id="main" className="flex flex-1 flex-col">
+        <AnimatePresence>
+          {apiOnline === false ? (
+            <motion.aside
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-4 rounded-sm border border-[color-mix(in_oklab,var(--ember)_50%,transparent)] bg-[rgba(255,107,74,0.1)] px-4 py-3"
+              role="status"
+            >
+              <p className="display text-base text-[var(--ember)]">
+                Live API is offline — Ignite needs the Go service.
+              </p>
+              <p className="mono mt-1 text-[11px] leading-relaxed text-[var(--fog-dim)]">
+                Watch the recorded Arena run, then come back when the API is up.
+              </p>
+              <a
+                href={DEMO_VIDEO_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="mono mt-3 inline-flex text-[11px] uppercase tracking-[0.16em] text-[var(--gold)] underline decoration-[color-mix(in_oklab,var(--gold)_40%,transparent)] underline-offset-4"
+              >
+                Open Arena demo (mp4) →
+              </a>
+            </motion.aside>
+          ) : null}
+        </AnimatePresence>
+
         <motion.div
           className="mt-4 flex flex-wrap items-center justify-between gap-3"
           initial={{ opacity: 0, y: -8 }}
@@ -297,14 +337,22 @@ export function PulseTheater() {
 
         <AnimatePresence>
           {error ? (
-            <motion.p
+            <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               className="mono mt-4 rounded-sm border border-[color-mix(in_oklab,var(--ember)_45%,transparent)] bg-[rgba(255,107,74,0.08)] px-3 py-2 text-sm text-[var(--ember)]"
             >
-              {error}
-            </motion.p>
+              <p>{error}</p>
+              <a
+                href={DEMO_VIDEO_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex text-[11px] uppercase tracking-[0.16em] text-[var(--gold)] underline decoration-[color-mix(in_oklab,var(--gold)_40%,transparent)] underline-offset-4"
+              >
+                Open Arena demo (mp4) →
+              </a>
+            </motion.div>
           ) : null}
         </AnimatePresence>
 
