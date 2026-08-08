@@ -45,7 +45,7 @@ export function SiteNav() {
         </div>
       </div>
       <p className="mono text-[10px] uppercase tracking-[0.18em] text-[var(--fog-mute)]">
-        live console · v0.1.0
+        live console · v0.3.0
       </p>
     </nav>
   );

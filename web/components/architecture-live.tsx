@@ -11,6 +11,7 @@ import {
   type ArchNodeId,
   type LiveSnapshot,
 } from "@/lib/architecture";
+import { DEMO_VIDEO_URL } from "@/lib/demo-script";
 import type { MetricsMap } from "@/lib/types";
 
 const DEEP_DIVES = [
@@ -131,6 +132,33 @@ export function ArchitectureLive() {
         <SiteNav />
 
         <main id="main">
+        <AnimatePresence>
+          {live && !live.ok ? (
+            <motion.aside
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-4 rounded-sm border border-[color-mix(in_oklab,var(--ember)_50%,transparent)] bg-[rgba(255,107,74,0.1)] px-4 py-3"
+              role="status"
+            >
+              <p className="display text-base text-[var(--ember)]">
+                Live API is offline — metrics on this page will not move.
+              </p>
+              <p className="mono mt-1 text-[11px] leading-relaxed text-[var(--fog-dim)]">
+                Watch the recorded Arena run for the full pipeline story.
+              </p>
+              <a
+                href={DEMO_VIDEO_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="mono mt-3 inline-flex text-[11px] uppercase tracking-[0.16em] text-[var(--gold)] underline decoration-[color-mix(in_oklab,var(--gold)_40%,transparent)] underline-offset-4"
+              >
+                Open Arena demo (mp4) →
+              </a>
+            </motion.aside>
+          ) : null}
+        </AnimatePresence>
+
         <header className="mt-8 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
             <p className="mono text-[11px] uppercase tracking-[0.3em] text-[var(--fog-mute)]">

@@ -25,8 +25,12 @@ export const BEAT_CAPTION: Record<DemoBeat, string> = {
   acme: "Acme VIP path — score climbs, welcome lands.",
   nova: "Nova velocity path — burst bets raise a flag.",
   payoff: "Same ledger path. Different outcomes. No double credit.",
-  error: "Backend unreachable — start the Go API on :8080.",
+  error: "Backend unreachable — watch the recorded Arena demo, or retry when the API is up.",
 };
+
+/** Recorded Arena demo when the live API is unreachable. */
+export const DEMO_VIDEO_URL =
+  "https://github.com/o-mid/engagepulse/releases/download/v0.3.0/engagepulse-web-arena-v0.3.0.mp4";
 
 export const BEAT_PLAIN: Record<DemoBeat, string> = {
   idle: "Ready",
