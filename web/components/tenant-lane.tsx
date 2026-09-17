@@ -6,6 +6,7 @@ import { UserIcon } from "@/components/icons/user";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty } from "@/components/ui/empty";
+import { cn } from "@/lib/utils";
 import type { PlayerSnapshot } from "@/lib/types";
 
 type Props = {
@@ -20,6 +21,7 @@ type Props = {
   focus: boolean;
   outcome: string;
   hideIntegrity?: boolean;
+  className?: string;
 };
 
 function tierProgress(score: number) {
@@ -42,6 +44,7 @@ export function TenantLane({
   focus,
   outcome,
   hideIntegrity,
+  className,
 }: Props) {
   const reduce = useReducedMotion();
   const flag = hideIntegrity ? "" : player?.integrity_flag ?? "";
@@ -51,7 +54,11 @@ export function TenantLane({
 
   return (
     <Card
-      className={`flex h-full min-h-80 flex-col ${side === "acme" ? "lane-acme" : "lane-nova"}`}
+      className={cn(
+        "flex h-full min-h-64 flex-col md:min-h-80",
+        side === "acme" ? "lane-acme" : "lane-nova",
+        className,
+      )}
       style={{
         boxShadow: focus
           ? "var(--shadow-panel), var(--shadow-focus)"

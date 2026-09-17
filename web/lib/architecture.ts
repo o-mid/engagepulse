@@ -63,6 +63,14 @@ export const ARCH_NODES: ArchNode[] = [
     code: "internal/worker",
   },
   {
+    id: "dlq",
+    label: "DLQ",
+    plain: "Hard fail",
+    detail: "After 3 worker retries, the event is published to player.events.dlq and is not credited.",
+    code: "player.events.dlq",
+    branch: true,
+  },
+  {
     id: "rules",
     label: "Rules",
     plain: "Decide",
@@ -82,14 +90,6 @@ export const ARCH_NODES: ArchNode[] = [
     plain: "Snapshot",
     detail: "HTTP or gRPC behind X-API-Key. Tools get_player and get_metrics read. They do not credit or set VIP.",
     code: "GET /v1/players/{id}",
-  },
-  {
-    id: "dlq",
-    label: "DLQ",
-    plain: "Hard fail",
-    detail: "After 3 worker retries, the event is published to player.events.dlq and is not credited.",
-    code: "player.events.dlq",
-    branch: true,
   },
 ];
 
