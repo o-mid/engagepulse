@@ -59,6 +59,7 @@ export function PulseField({ running, onReady }: Props) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let raf = 0;
     let w = 0;
     let h = 0;
@@ -67,31 +68,53 @@ export function PulseField({ running, onReady }: Props) {
     const orbs: Orb[] = [];
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
+    const paintGlow = () => {
+      ctx.clearRect(0, 0, w, h);
+      const g1 = ctx.createRadialGradient(w * 0.28, h * 0.52, 0, w * 0.28, h * 0.52, w * 0.38);
+      g1.addColorStop(0, "rgba(232,168,124,0.1)");
+      g1.addColorStop(1, "rgba(232,168,124,0)");
+      ctx.fillStyle = g1;
+      ctx.fillRect(0, 0, w, h);
+      const g2 = ctx.createRadialGradient(w * 0.72, h * 0.52, 0, w * 0.72, h * 0.52, w * 0.38);
+      g2.addColorStop(0, "rgba(45,212,191,0.09)");
+      g2.addColorStop(1, "rgba(45,212,191,0)");
+      ctx.fillStyle = g2;
+      ctx.fillRect(0, 0, w, h);
+    };
+
     const resize = () => {
       w = canvas.clientWidth;
       h = canvas.clientHeight;
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (orbs.length === 0) {
-        for (let i = 0; i < 18; i++) {
-          const hue = i % 2 === 0 ? "acme" : "nova";
-          const baseX = hue === "acme" ? w * (0.12 + Math.random() * 0.28) : w * (0.58 + Math.random() * 0.28);
-          const baseY = h * (0.25 + Math.random() * 0.5);
-          orbs.push({
-            x: baseX,
-            y: baseY,
-            baseX,
-            baseY,
-            phase: Math.random() * Math.PI * 2,
-            hue,
-            r: 1.2 + Math.random() * 2.2,
-          });
-        }
-      }
+      if (reduce) paintGlow();
     };
     resize();
     window.addEventListener("resize", resize);
+
+    if (reduce) {
+      onReadyRef.current?.({ burst: () => {} });
+      return () => window.removeEventListener("resize", resize);
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const hue = i % 2 === 0 ? "acme" : "nova";
+      const baseX =
+        hue === "acme"
+          ? w * (0.12 + Math.random() * 0.28)
+          : w * (0.58 + Math.random() * 0.28);
+      const baseY = h * (0.25 + Math.random() * 0.5);
+      orbs.push({
+        x: baseX,
+        y: baseY,
+        baseX,
+        baseY,
+        phase: Math.random() * Math.PI * 2,
+        hue,
+        r: 1.2 + Math.random() * 2.2,
+      });
+    }
 
     const burst = (side: "acme" | "nova", intensity = 1) => {
       const x = side === "acme" ? w * 0.28 : w * 0.72;
@@ -174,8 +197,8 @@ export function PulseField({ running, onReady }: Props) {
         }
       }
 
-      if (runningRef.current && Math.random() < 0.03) {
-        burst(Math.random() > 0.5 ? "acme" : "nova", 0.3);
+      if (runningRef.current && Math.random() < 0.012) {
+        burst(Math.random() > 0.5 ? "acme" : "nova", 0.25);
       }
 
       for (let i = pulses.length - 1; i >= 0; i--) {
