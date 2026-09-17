@@ -138,6 +138,7 @@ Details: [concepts.md](./concepts.md). Code: `internal/rules`.
 | Call | How you prove who you are |
 | --- | --- |
 | `POST /v1/events` | Header `X-Signature` (HMAC of the raw body) |
+| `POST /v1/tools/{name}` | Header `X-API-Key`; `ingest` also `X-Signature` of the event body |
 | `GET /v1/players/{id}` | Header `X-API-Key` |
 | gRPC `GetPlayer` | metadata `x-api-key` |
 

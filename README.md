@@ -90,6 +90,7 @@ make demo
 | --- | --- |
 | Send event | `POST /v1/events` (header `X-Signature`) |
 | Read player | `GET /v1/players/{id}` (header `X-API-Key`) |
+| Tool call | `POST /v1/tools/{name}` (header `X-API-Key`; `ingest` also `X-Signature`) |
 | Read player (gRPC) | `GetPlayer` (metadata `x-api-key`) |
 | Health | `GET /healthz` |
 | Counters | `GET /metrics` |
@@ -126,4 +127,5 @@ CI runs `gofmt`, `go vet`, `golangci-lint`, and `go test ./... -p 1` on `main` /
 
 - [Simple concepts](docs/concepts.md)
 - [How it is built](docs/architecture.md)
+- [Allowlisted tools](docs/tools.md)
 - [Web console](web/README.md)
