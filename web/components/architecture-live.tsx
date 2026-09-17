@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
+import { OpsPanels } from "@/components/ops-panels";
 import { SiteNav } from "@/components/site-nav";
 import { StatusBanner } from "@/components/status-banner";
 import {
@@ -326,6 +327,8 @@ export function ArchitectureLive() {
               ))}
             </div>
           </section>
+
+          <OpsPanels />
         </main>
       </div>
     </div>

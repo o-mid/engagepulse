@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { EventTicker } from "@/components/event-ticker";
+import { OpsPanels } from "@/components/ops-panels";
 import { PipelineRail } from "@/components/pipeline-rail";
 import { PulseField, type PulseFieldHandle } from "@/components/pulse-field";
 import { RuleBeacons } from "@/components/rule-beacons";
@@ -399,6 +400,8 @@ export function PulseTheater() {
               </motion.div>
             ) : null}
           </AnimatePresence>
+
+          <OpsPanels />
         </main>
       </div>
     </div>

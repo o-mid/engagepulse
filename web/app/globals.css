@@ -263,9 +263,12 @@ input {
   touch-action: manipulation;
 }
 
-.focus-ring:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
+.ops-details summary {
+  min-height: 44px;
+}
+
+.ops-details summary::-webkit-details-marker {
+  color: var(--fog-mute);
 }
 
 .nav-link {
