@@ -70,6 +70,8 @@ make demo
 
 `make replay` is the contract for those two brands: it applies `testdata/replay/` through the worker and fails if the player JSON drifts. `make demo` is the guided tour of the same outcomes against a running API.
 
+`make rulepatch` prints an advisory diff for a request like `raise velocity threshold` and re-runs replay before/after. It does not write `internal/rules`. Copy the diff yourself if you want it. CI uses the mock proposer; `PROPOSER=openai` without `OPENAI_API_KEY` errors instead of falling back to mock.
+
 ## Plain map of ideas → code
 
 | Idea | Where |
@@ -82,6 +84,7 @@ make demo
 | Message stream + failed-message topic | `internal/kafka` |
 | Worker mark + state + credit in one DB tx | `internal/worker`, `internal/store`, `internal/ledger` |
 | The three rules | `internal/rules` |
+| Advisory rule patch | `cmd/rulepatch`, `internal/rulepatch` |
 | Bonus credit without double-pay | `internal/ledger` |
 | Read player over HTTP / gRPC | `internal/api/httpapi`, `internal/api/grpcapi` |
 | HMAC / API-key / tenant isolation tests | `internal/api/httpapi/security_test.go` |
@@ -106,6 +109,7 @@ make demo
 | `make loadgen` | Send signed events |
 | `make demo` | Guided end-to-end run |
 | `make replay` | Replay pack vs expected player JSON (needs `DATABASE_URL`) |
+| `make rulepatch` | Print an advisory rule diff and replay traces (not applied) |
 | `make test` | Tests (set `DATABASE_URL` for DB tests) |
 
 ## Web console
