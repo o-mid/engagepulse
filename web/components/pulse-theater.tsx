@@ -8,11 +8,11 @@ import { PipelineRail } from "@/components/pipeline-rail";
 import { PulseField, type PulseFieldHandle } from "@/components/pulse-field";
 import { RuleBeacons } from "@/components/rule-beacons";
 import { SiteNav } from "@/components/site-nav";
+import { StatusBanner } from "@/components/status-banner";
 import { TenantLane } from "@/components/tenant-lane";
 import {
   BEAT_CAPTION,
   BEAT_PLAIN,
-  DEMO_VIDEO_URL,
   acmeOutcome,
   novaOutcome,
   pickStoryEvents,
@@ -42,7 +42,6 @@ export function PulseTheater() {
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
-  const [clock, setClock] = useState("");
   const [showAllTape, setShowAllTape] = useState(false);
   const [payoff, setPayoff] = useState(false);
 
@@ -70,48 +69,40 @@ export function PulseTheater() {
     [events],
   );
 
-  useEffect(() => {
-    const tick = () =>
-      setClock(
-        new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }),
-      );
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
+  const probe = useCallback(async () => {
+    try {
+      const [healthRes, metricsRes] = await Promise.all([
+        fetch("/api/health", { cache: "no-store" }),
+        fetch("/api/metrics", { cache: "no-store" }),
+      ]);
+      const health = (await healthRes.json().catch(() => null)) as {
+        ok?: boolean;
+      } | null;
+      const online = !!health?.ok;
+      setApiOnline(online);
+      if (online && metricsRes.ok) {
+        setLifetime((await metricsRes.json()) as MetricsMap);
+      }
+      return online;
+    } catch {
+      setApiOnline(false);
+      return false;
+    }
   }, []);
 
   useEffect(() => {
     let alive = true;
-    const probe = async () => {
-      try {
-        const [healthRes, metricsRes] = await Promise.all([
-          fetch("/api/health", { cache: "no-store" }),
-          fetch("/api/metrics", { cache: "no-store" }),
-        ]);
-        if (!alive) return;
-        const health = (await healthRes.json().catch(() => null)) as {
-          ok?: boolean;
-        } | null;
-        const online = !!health?.ok;
-        setApiOnline(online);
-        if (online && metricsRes.ok) {
-          setLifetime((await metricsRes.json()) as MetricsMap);
-        }
-      } catch {
-        if (alive) setApiOnline(false);
-      }
+    const tick = async () => {
+      if (!alive) return;
+      await probe();
     };
-    void probe();
-    const id = window.setInterval(probe, 15_000);
+    void tick();
+    const id = window.setInterval(tick, 15_000);
     return () => {
       alive = false;
       window.clearInterval(id);
     };
-  }, []);
+  }, [probe]);
 
   const onFieldReady = useCallback((api: PulseFieldHandle) => {
     fieldRef.current = api;
@@ -147,7 +138,6 @@ export function PulseTheater() {
       setBeat("ingest");
       if (!reduce) fieldRef.current?.burst("nova", 0.8);
 
-      // Kick the network while we animate early beats.
       const fetchPromise = fetch("/api/demo", { method: "POST", signal: ac.signal });
 
       await pause(650);
@@ -169,21 +159,18 @@ export function PulseTheater() {
       setWelcomeAlready(!!data.notes?.welcome_already_credited);
       setShowDetails(true);
 
-      // Beat: Acme VIP first
       setBeat("acme");
       setAcme(data.players.acme);
       setShowAcme(true);
       if (!reduce) fieldRef.current?.burst("acme", 1.6);
       await pause(1600);
 
-      // Beat: Nova velocity second
       setBeat("nova");
       setNova(data.players.nova);
       setShowNova(true);
       if (!reduce) fieldRef.current?.burst("nova", 1.6);
       await pause(1500);
 
-      // Payoff
       setBeat("payoff");
       setPayoff(true);
       if (!reduce) {
@@ -193,8 +180,8 @@ export function PulseTheater() {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setBeat("error");
-      setApiOnline(false);
       setError(err instanceof Error ? err.message : "demo failed");
+      void probe();
     } finally {
       setElapsed(Math.round(performance.now() - started));
       setBusy(false);
@@ -202,6 +189,9 @@ export function PulseTheater() {
   }
 
   const caption = BEAT_CAPTION[beat];
+  const offline = apiOnline === false;
+  const igniteDisabled = busy || offline;
+  const showStage = busy || showDetails || (beat !== "idle" && beat !== "error");
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -212,266 +202,203 @@ export function PulseTheater() {
       <div className="noise" />
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-14 pt-5 md:px-8">
-        <SiteNav />
+        <SiteNav apiOnline={apiOnline} />
 
         <main id="main" className="flex flex-1 flex-col">
-        <AnimatePresence>
-          {apiOnline === false ? (
-            <motion.aside
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="mt-4 rounded-sm border border-[color-mix(in_oklab,var(--ember)_50%,transparent)] bg-[rgba(255,107,74,0.1)] px-4 py-3"
-              role="status"
-            >
-              <p className="display text-base text-[var(--ember)]">
-                Live API is offline — Ignite needs the Go service.
-              </p>
-              <p className="mono mt-1 text-[11px] leading-relaxed text-[var(--fog-dim)]">
-                Watch the recorded Arena run, then come back when the API is up.
-              </p>
-              <a
-                href={DEMO_VIDEO_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="mono mt-3 inline-flex text-[11px] uppercase tracking-[0.16em] text-[var(--gold)] underline decoration-[color-mix(in_oklab,var(--gold)_40%,transparent)] underline-offset-4"
-              >
-                Open Arena demo (mp4) →
-              </a>
-            </motion.aside>
-          ) : null}
-        </AnimatePresence>
-
-        <motion.div
-          className="mt-4 flex flex-wrap items-center justify-between gap-3"
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="flex flex-wrap items-center gap-3 mono text-[10px] uppercase tracking-[0.2em] text-[var(--fog-mute)]">
-            <span className="inline-flex items-center gap-2">
-              <span
-                className={`live-dot h-1.5 w-1.5 rounded-full ${
-                  apiOnline ? "bg-[var(--teal)]" : "bg-[var(--ember)]"
-                }`}
-              />
-              api {apiOnline == null ? "probing" : apiOnline ? "online" : "offline"}
-            </span>
-            <span className="text-[var(--line)]">|</span>
-            <span>secure sign → accept → process → reward</span>
-          </div>
-          <div className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--fog-mute)]">
-            {clock || "--:--:--"}
-          </div>
-        </motion.div>
-
-        <header className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div>
-            <p className="mono text-[11px] uppercase tracking-[0.35em] text-[var(--fog-mute)]">
-              engagepulse · live arena
-            </p>
-            <motion.h1
-              className="display mt-2 text-5xl leading-[0.9] md:text-7xl lg:text-8xl"
-              initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <span className="text-[var(--fog)]">Pulse</span>
-              <span className="bg-gradient-to-r from-[var(--copper)] via-[var(--gold)] to-[var(--teal)] bg-clip-text text-transparent">
-                Arena
-              </span>
-            </motion.h1>
-            <p className="mt-4 max-w-xl text-base leading-relaxed text-[var(--fog-dim)] md:text-lg">
-              One click. Two tenants. Watch VIP climb on Acme, then velocity flag
-              on Nova — same pipeline, different outcome.
-            </p>
-          </div>
-
-          <div className="glass-panel min-w-[200px] rounded-sm px-4 py-3 text-right">
-            <p className="mono text-[10px] uppercase tracking-[0.22em] text-[var(--fog-mute)]">
-              now
-            </p>
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={beat}
-                initial={{ opacity: 0, y: 6 }}
+          <AnimatePresence>
+            {offline && !error ? (
+              <motion.div
+                initial={reduce ? false : { opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                className="mono mt-1 text-sm text-[var(--fog)]"
+                exit={{ opacity: 0 }}
               >
+                <StatusBanner
+                  title="Live API is offline"
+                  detail="Ignite needs the Go service. Watch the recorded Arena run, or retry when the API is up."
+                  onRetry={() => {
+                    void probe();
+                  }}
+                  retryLabel="Retry API"
+                />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          <header className="mt-8 max-w-2xl">
+            <h1 className="display text-4xl leading-[0.95] md:text-5xl">
+              Pulse Arena
+            </h1>
+            <p className="mt-3 text-base leading-relaxed text-[var(--fog-dim)] md:text-lg">
+              Two tenants, one ledger path. Ignite to watch VIP on Acme, then a
+              velocity flag on Nova.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={runDemo}
+                disabled={igniteDisabled}
+                aria-busy={busy}
+                className="btn-primary btn-shimmer focus-ring display relative min-h-11 overflow-hidden rounded-sm px-5 py-2.5 text-base disabled:cursor-not-allowed"
+              >
+                <span className="relative z-10">
+                  {busy ? "Running demo" : "Ignite live demo"}
+                </span>
+              </button>
+              <p className="mono text-[12px] text-[var(--fog-mute)]">
                 {BEAT_PLAIN[beat]}
-              </motion.p>
-            </AnimatePresence>
-            {elapsed > 0 ? (
-              <p className="mono mt-1 text-[11px] text-[var(--fog-mute)]">
-                {elapsed.toLocaleString()}ms wall
+                {elapsed > 0 ? ` · ${elapsed.toLocaleString()}ms` : ""}
               </p>
-            ) : (
-              <p className="mono mt-1 text-[11px] text-[var(--fog-mute)]">
-                awaiting ignite
-              </p>
-            )}
-          </div>
-        </header>
+            </div>
+          </header>
 
-        <div className="mt-7 flex flex-wrap items-center gap-3">
-          <motion.button
-            type="button"
-            onClick={runDemo}
-            disabled={busy}
-            whileHover={busy ? undefined : { scale: 1.02 }}
-            whileTap={busy ? undefined : { scale: 0.98 }}
-            className="btn-shimmer display relative overflow-hidden rounded-sm px-6 py-3 text-base text-[var(--ink)] disabled:cursor-wait disabled:opacity-70"
-            style={{
-              background:
-                "linear-gradient(120deg, var(--copper), var(--gold) 45%, var(--teal))",
-            }}
-          >
-            <span className="relative z-10">
-              {busy ? "Running guided demo…" : "Ignite live demo"}
-            </span>
-          </motion.button>
-          <p className="mono max-w-md text-[11px] leading-relaxed text-[var(--fog-mute)]">
-            Guided beats: sign → accept → process → Acme VIP → Nova flag → payoff.
-          </p>
-        </div>
-
-        <AnimatePresence>
-          {error ? (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="mono mt-4 rounded-sm border border-[color-mix(in_oklab,var(--ember)_45%,transparent)] bg-[rgba(255,107,74,0.08)] px-3 py-2 text-sm text-[var(--ember)]"
-            >
-              <p>{error}</p>
-              <a
-                href={DEMO_VIDEO_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-flex text-[11px] uppercase tracking-[0.16em] text-[var(--gold)] underline decoration-[color-mix(in_oklab,var(--gold)_40%,transparent)] underline-offset-4"
+          <AnimatePresence>
+            {error ? (
+              <motion.div
+                initial={reduce ? false : { opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
               >
-                Open Arena demo (mp4) →
-              </a>
-            </motion.div>
+                <StatusBanner
+                  tone="error"
+                  title="Demo did not finish"
+                  detail={error}
+                  onRetry={() => {
+                    void runDemo();
+                  }}
+                  retryLabel="Retry demo"
+                />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {payoff ? (
+              <motion.div
+                initial={reduce ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mt-6 rounded-sm border border-[var(--line)] bg-[rgba(240,194,127,0.06)] px-4 py-3"
+              >
+                <p className="display text-lg text-[var(--gold)]">
+                  Same ledger path. Different outcomes. No double credit.
+                </p>
+                <p className="mt-1 text-sm text-[var(--fog-mute)]">
+                  {welcomeAlready
+                    ? "Welcome already on the player. Idempotent credit held."
+                    : "Welcome credited once. VIP gold. Velocity flagged."}
+                </p>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          {showStage ? (
+            <div className="mt-6">
+              <PipelineRail beat={beat} caption={caption} />
+            </div>
+          ) : beat === "idle" && !offline ? (
+            <p className="mt-8 max-w-xl text-sm text-[var(--fog-mute)]">
+              Tenant lanes stay empty until Ignite. HMAC signing stays in the
+              BFF.
+            </p>
           ) : null}
-        </AnimatePresence>
 
-        <AnimatePresence>
-          {payoff ? (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="mt-5 rounded-sm border border-[color-mix(in_oklab,var(--gold)_40%,transparent)] bg-[rgba(240,194,127,0.08)] px-4 py-3"
-            >
-              <p className="display text-lg text-[var(--gold)]">
-                Same ledger path. Different outcomes. No double credit.
-              </p>
-              <p className="mono mt-1 text-[11px] text-[var(--fog-mute)]">
-                {welcomeAlready
-                  ? "Welcome already on the player — idempotent credit held."
-                  : "Welcome credited once · VIP gold · velocity flagged."}
-              </p>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-
-        <div className="mt-6">
-          <PipelineRail beat={beat} caption={caption} />
-        </div>
-
-        {/* Stage 2+: lanes reveal with the story */}
-        <AnimatePresence>
-          {(busy || showDetails || beat !== "idle") && (
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.85fr]"
-            >
-              <div className="glass-panel relative grid overflow-hidden rounded-sm md:grid-cols-2">
-                <TenantLane
-                  side="acme"
-                  title="Acme"
-                  subtitle="vip path"
-                  blurb="Deposit → heavy bets → VIP climbs → welcome credit."
-                  player={acme}
-                  revealed={showAcme}
-                  focus={beat === "acme"}
-                  outcome={showAcme ? acmeOutcome(acme) : ""}
-                  hideIntegrity
-                />
-                <TenantLane
-                  side="nova"
-                  title="Nova"
-                  subtitle="velocity path"
-                  blurb="Tight bet bursts → integrity velocity flag."
-                  player={nova}
-                  revealed={showNova}
-                  focus={beat === "nova"}
-                  outcome={showNova ? novaOutcome(nova) : ""}
-                />
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <RuleBeacons
-                  lit={lit}
-                  deltas={delta}
-                  welcomeAlready={welcomeAlready}
-                  velocityOnPlayer={
-                    showNova && nova?.integrity_flag === "velocity"
-                  }
-                />
-
-                <div className="glass-panel corner-frame relative rounded-sm p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="mono text-[10px] uppercase tracking-[0.22em] text-[var(--fog-mute)]">
-                      this run
-                    </p>
-                    <p className="mono text-[10px] text-[var(--fog-mute)]">
-                      deltas · not lifetime
-                    </p>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <Counter label="ingested +" value={delta.engagepulse_events_ingested_total} />
-                    <Counter label="processed +" value={delta.engagepulse_events_processed_total} />
-                    <Counter label="credits +" value={delta.engagepulse_ledger_credits_total} />
-                    <Counter label="packets" value={events.length || undefined} />
-                  </div>
-                  <p className="mono mt-3 text-[10px] text-[var(--fog-mute)]">
-                    lifetime ingested{" "}
-                    {(lifetime.engagepulse_events_ingested_total ?? 0).toLocaleString()}
-                  </p>
+          <AnimatePresence>
+            {showStage ? (
+              <motion.div
+                initial={reduce ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.85fr]"
+              >
+                <div className="glass-panel relative grid overflow-hidden rounded-sm md:grid-cols-2">
+                  <TenantLane
+                    side="acme"
+                    title="Acme"
+                    subtitle="vip path"
+                    blurb="Deposit, heavy bets, VIP climbs, welcome credit."
+                    player={acme}
+                    revealed={showAcme}
+                    focus={beat === "acme"}
+                    outcome={showAcme ? acmeOutcome(acme) : ""}
+                    hideIntegrity
+                  />
+                  <TenantLane
+                    side="nova"
+                    title="Nova"
+                    subtitle="velocity path"
+                    blurb="Tight bet bursts, then an integrity velocity flag."
+                    player={nova}
+                    revealed={showNova}
+                    focus={beat === "nova"}
+                    outcome={showNova ? novaOutcome(nova) : ""}
+                  />
                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
-        <AnimatePresence>
-          {showDetails ? (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-5"
-            >
-              <EventTicker
-                stories={stories}
-                totalAccepted={events.length}
-                showAll={showAllTape}
-                onToggle={() => setShowAllTape((v) => !v)}
-                allLabels={allLabels}
-              />
-            </motion.div>
-          ) : beat === "idle" ? (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mono mt-8 text-center text-[12px] uppercase tracking-[0.22em] text-[var(--fog-mute)]"
-            >
-              Press Ignite — lanes and rules stay hidden until the story needs them
-            </motion.p>
-          ) : null}
-        </AnimatePresence>
+                <div className="flex flex-col gap-4">
+                  <RuleBeacons
+                    lit={lit}
+                    deltas={delta}
+                    welcomeAlready={welcomeAlready}
+                    velocityOnPlayer={
+                      showNova && nova?.integrity_flag === "velocity"
+                    }
+                  />
+
+                  <div className="glass-panel relative rounded-sm p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="mono text-[10px] uppercase tracking-[0.18em] text-[var(--fog-mute)]">
+                        this run
+                      </p>
+                      <p className="mono text-[10px] text-[var(--fog-mute)]">
+                        deltas, not lifetime
+                      </p>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <Counter
+                        label="ingested +"
+                        value={delta.engagepulse_events_ingested_total}
+                      />
+                      <Counter
+                        label="processed +"
+                        value={delta.engagepulse_events_processed_total}
+                      />
+                      <Counter
+                        label="credits +"
+                        value={delta.engagepulse_ledger_credits_total}
+                      />
+                      <Counter
+                        label="packets"
+                        value={events.length || undefined}
+                      />
+                    </div>
+                    <p className="mono mt-3 text-[10px] text-[var(--fog-mute)]">
+                      lifetime ingested{" "}
+                      {(
+                        lifetime.engagepulse_events_ingested_total ?? 0
+                      ).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showDetails ? (
+              <motion.div
+                initial={reduce ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-5"
+              >
+                <EventTicker
+                  stories={stories}
+                  totalAccepted={events.length}
+                  showAll={showAllTape}
+                  onToggle={() => setShowAllTape((v) => !v)}
+                  allLabels={allLabels}
+                />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </main>
       </div>
     </div>

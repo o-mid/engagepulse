@@ -4,8 +4,8 @@
   --ink: #0c0a09;
   --ink-elevated: #161210;
   --fog: #f5efe6;
-  --fog-dim: rgba(245, 239, 230, 0.62);
-  --fog-mute: rgba(245, 239, 230, 0.38);
+  --fog-dim: #c9c0b4;
+  --fog-mute: #b7aea3;
   --copper: #e8a87c;
   --gold: #f0c27f;
   --ember: #ff6b4a;
@@ -32,6 +32,11 @@
   box-sizing: border-box;
 }
 
+html {
+  min-height: 100%;
+  scrollbar-gutter: stable;
+}
+
 html,
 body {
   min-height: 100%;
@@ -55,7 +60,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 50;
-  opacity: 0.05;
+  opacity: 0.03;
   mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -65,7 +70,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 49;
-  opacity: 0.035;
+  opacity: 0.02;
   background: repeating-linear-gradient(
     to bottom,
     transparent 0,
@@ -79,11 +84,10 @@ body {
   position: absolute;
   inset: -20%;
   background:
-    radial-gradient(40% 35% at 18% 30%, rgba(232, 168, 124, 0.26), transparent 70%),
-    radial-gradient(38% 40% at 82% 35%, rgba(45, 212, 191, 0.2), transparent 70%),
-    radial-gradient(50% 45% at 50% 100%, rgba(255, 107, 74, 0.1), transparent 70%);
+    radial-gradient(40% 35% at 18% 30%, rgba(232, 168, 124, 0.16), transparent 70%),
+    radial-gradient(38% 40% at 82% 35%, rgba(45, 212, 191, 0.12), transparent 70%),
+    radial-gradient(50% 45% at 50% 100%, rgba(255, 107, 74, 0.06), transparent 70%);
   filter: blur(10px);
-  animation: aurora-drift 14s ease-in-out infinite alternate;
 }
 
 .vignette {
@@ -149,12 +153,7 @@ body {
 }
 
 .marquee-track {
-  animation: marquee 32s linear infinite;
   width: max-content;
-}
-
-.marquee-track:hover {
-  animation-play-state: paused;
 }
 
 @keyframes shimmer {
@@ -173,10 +172,9 @@ body {
   background: linear-gradient(
     105deg,
     transparent 35%,
-    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.22) 50%,
     transparent 65%
   );
-  animation: shimmer 2.8s ease-in-out infinite;
 }
 
 @keyframes pulse-dot {
@@ -192,7 +190,7 @@ body {
 }
 
 .live-dot {
-  animation: pulse-dot 1.6s ease-in-out infinite;
+  display: inline-block;
 }
 
 @keyframes rule-glow {
@@ -218,7 +216,6 @@ body {
   );
   opacity: 0.25;
   filter: blur(10px);
-  animation: rule-glow 2.2s ease-in-out infinite;
   z-index: -1;
 }
 
@@ -257,16 +254,84 @@ body {
 }
 
 .pipeline-node-active {
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--gold) 50%, transparent),
-    0 0 24px color-mix(in oklab, var(--copper) 35%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--gold) 50%, transparent);
+}
+
+a,
+button,
+input {
+  touch-action: manipulation;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.nav-link {
+  color: var(--fog-mute);
+  background: transparent;
+}
+
+.nav-link[data-active="true"] {
+  color: var(--ink);
+  background: var(--copper);
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+
+.btn-primary {
+  background: var(--copper);
+  color: var(--ink);
+}
+
+.btn-primary:disabled {
+  background: #6b5346;
+  color: #e8d7c8;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-link:hover:not([data-active="true"]) {
+    color: var(--fog);
+    background: color-mix(in oklab, var(--fog) 8%, transparent);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--gold);
+  }
+
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .aurora {
+    animation: aurora-drift 18s ease-in-out infinite alternate;
+  }
+
+  .btn-shimmer::after {
+    animation: shimmer 2.8s ease-in-out infinite;
+  }
+
+  .live-dot {
+    animation: pulse-dot 1.6s ease-in-out infinite;
+  }
+
+  .rule-lit::before {
+    animation: rule-glow 2.2s ease-in-out infinite;
+  }
+
+  .marquee-track {
+    animation: marquee 32s linear infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .aurora,
-  .marquee-track,
-  .btn-shimmer::after,
-  .live-dot,
-  .rule-lit::before {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

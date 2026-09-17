@@ -8,15 +8,22 @@ const LINKS = [
   { href: "/architecture", label: "Architecture" },
 ] as const;
 
-export function SiteNav() {
+type Props = {
+  apiOnline?: boolean | null;
+};
+
+export function SiteNav({ apiOnline }: Props) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-3">
-      <div className="flex items-center gap-4">
+    <nav
+      aria-label="Primary"
+      className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-3"
+    >
+      <div className="flex flex-wrap items-center gap-3">
         <Link
           href="/"
-          className="display text-lg tracking-tight text-[var(--fog)]"
+          className="focus-ring display text-lg tracking-tight text-[var(--fog)]"
         >
           Engage<span className="text-[var(--copper)]">Pulse</span>
         </Link>
@@ -30,13 +37,9 @@ export function SiteNav() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="mono rounded-sm px-2.5 py-1.5 text-[11px] uppercase tracking-[0.18em] transition-colors"
-                style={{
-                  color: active ? "var(--ink)" : "var(--fog-mute)",
-                  background: active
-                    ? "linear-gradient(120deg, var(--copper), var(--teal))"
-                    : "transparent",
-                }}
+                aria-current={active ? "page" : undefined}
+                data-active={active ? "true" : "false"}
+                className="nav-link focus-ring mono inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm px-3 py-2 text-[11px] uppercase tracking-[0.16em]"
               >
                 {link.label}
               </Link>
@@ -44,9 +47,21 @@ export function SiteNav() {
           })}
         </div>
       </div>
-      <p className="mono text-[10px] uppercase tracking-[0.18em] text-[var(--fog-mute)]">
-        live console · v0.3.0
-      </p>
+      {apiOnline === undefined ? null : (
+        <p className="mono inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-[var(--fog-mute)]">
+          <span
+            className={`live-dot h-1.5 w-1.5 rounded-full ${
+              apiOnline ? "bg-[var(--teal)]" : "bg-[var(--ember)]"
+            }`}
+            aria-hidden
+          />
+          {apiOnline == null
+            ? "API probing"
+            : apiOnline
+              ? "API online"
+              : "API offline"}
+        </p>
+      )}
     </nav>
   );
 }
