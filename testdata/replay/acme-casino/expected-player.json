@@ -1,0 +1,9 @@
+{
+  "tenant_id": "acme-casino",
+  "player_id": "replay-acme-casino-0",
+  "score": 3000,
+  "vip_tier": "silver",
+  "offer_tags": ["welcome_bonus"],
+  "integrity_flag": "",
+  "balance": 100
+}

@@ -1,0 +1,9 @@
+{
+  "tenant_id": "nova-sports",
+  "player_id": "replay-nova-sports-0",
+  "score": 70,
+  "vip_tier": "bronze",
+  "offer_tags": ["welcome_bonus"],
+  "integrity_flag": "velocity",
+  "balance": 100
+}
