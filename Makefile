@@ -1,4 +1,4 @@
-.PHONY: build run fmt vet test up down logs migrate seed loadgen demo replay rulepatch shadow
+.PHONY: build run fmt vet test up down logs migrate seed loadgen demo replay replay-kafka rulepatch shadow
 
 build:
 	go build -o bin/engagepulse ./cmd/engagepulse
@@ -38,7 +38,10 @@ demo:
 	bash ./scripts/demo.sh
 
 replay:
-	go test ./internal/replay -count=1
+	go test ./internal/replay -count=1 -run 'TestReplayPacks$$|TestFormatTraces'
+
+replay-kafka:
+	go test ./internal/replay -count=1 -run TestReplayPacksViaKafka
 
 REQUEST ?= raise velocity threshold
 rulepatch:

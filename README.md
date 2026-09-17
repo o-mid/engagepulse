@@ -68,7 +68,7 @@ make demo
 | `acme-casino` | Welcome bonus + VIP going up | `welcome_bonus`, VIP `silver` or `gold`, `balance: 100` |
 | `nova-sports` | Betting too fast | `welcome_bonus`, `integrity_flag: velocity`, `balance: 100` |
 
-`make replay` is the contract for those two brands: it applies `testdata/replay/` through the worker and fails if the player JSON drifts. `make demo` is the guided tour of the same outcomes against a running API.
+`make replay` is the contract for those two brands: it applies `testdata/replay/` through the worker and fails if the player JSON drifts. `make replay-kafka` applies the same packs through signed ingest, outbox, Kafka, and the consumer, and still credits once on a second run. `make demo` is the guided tour of the same outcomes against a running API.
 
 `make rulepatch` prints an advisory diff for a request like `raise velocity threshold` and re-runs replay before/after. It does not write `internal/rules`. Copy the diff yourself if you want it. CI uses the mock proposer; `PROPOSER=openai` without `OPENAI_API_KEY` errors instead of falling back to mock.
 
@@ -113,6 +113,7 @@ make demo
 | `make loadgen` | Send signed events |
 | `make demo` | Guided end-to-end run |
 | `make replay` | Replay pack vs expected player JSON (needs `DATABASE_URL`) |
+| `make replay-kafka` | Same packs through ingest → outbox → Kafka → consumer (needs Kafka) |
 | `make rulepatch` | Print an advisory rule diff and replay traces (not applied) |
 | `make shadow` | Print shadow vs velocity disagreement board (no credits) |
 | `make test` | Tests (set `DATABASE_URL` for DB tests) |
@@ -133,7 +134,7 @@ Open [http://localhost:3000](http://localhost:3000) and click **Ignite live demo
 
 See [web/README.md](web/README.md) for pages, env vars, and hosting notes.
 
-CI runs `gofmt`, `go vet`, `golangci-lint`, `go test ./... -p 1`, and `make replay` on `main` / `develop`.
+CI runs `gofmt`, `go vet`, `golangci-lint`, `go test ./... -p 1`, `make replay`, and `make replay-kafka` on `main` / `develop`.
 
 ## Docs
 
