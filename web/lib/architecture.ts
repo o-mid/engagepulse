@@ -66,7 +66,7 @@ export const ARCH_NODES: ArchNode[] = [
     id: "dlq",
     label: "DLQ",
     plain: "Hard fail",
-    detail: "After 3 worker retries, the event is published to player.events.dlq and is not credited.",
+    detail: "After 3 worker retries, the event is published to player.events.dlq and is not credited. Inspect last N; redrive is a new signed ingest of the same event_id.",
     code: "player.events.dlq",
     branch: true,
   },
@@ -150,7 +150,7 @@ export function liveReading(
     rules: `Hits: welcome ${live.welcome}, vip ${live.vip}, velocity ${live.velocity}.`,
     ledger: `Successful credits ${live.credits.toLocaleString()} (unique event ids).`,
     read: "GET /v1/players/{id}. Tools wrap the same reads. They do not credit.",
-    dlq: `${live.dlq.toLocaleString()} events on the dead-letter topic.`,
+    dlq: `${live.dlq.toLocaleString()} events on the dead-letter topic. Inspect last N; redrive is a human-clicked signed ingest.`,
   };
   return lines[id];
 }
