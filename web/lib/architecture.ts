@@ -31,14 +31,14 @@ export const ARCH_NODES: ArchNode[] = [
     id: "hmac",
     label: "HMAC sign",
     plain: "BFF",
-    detail: "The Next.js BFF hex HMAC-SHA256s the raw body. The browser never holds the secret.",
+    detail: "The Next.js BFF hex HMAC-SHA256s the raw body and sends X-Key-Id. The browser never holds the secret.",
     code: "web/lib/hmac.ts",
   },
   {
     id: "ingest",
     label: "HMAC verify",
     plain: "Go ingest",
-    detail: "internal/ingest checks X-Signature against the raw body bytes, then accepts. POST /v1/tools/ingest is the same path with an API key.",
+    detail: "internal/ingest checks X-Signature against the raw body bytes and X-Key-Id against live keys, then accepts. POST /v1/tools/ingest is the same path with an API key.",
     code: "POST /v1/events",
   },
   {

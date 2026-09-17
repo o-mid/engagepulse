@@ -96,7 +96,8 @@ make demo
 
 | What | Path |
 | --- | --- |
-| Send event | `POST /v1/events` (header `X-Signature`) |
+| Send event | `POST /v1/events` (header `X-Signature`, optional `X-Key-Id`) |
+| Rotate HMAC | `POST /v1/hmac/rotate` (header `X-API-Key`; overlap for that brand only) |
 | Read player | `GET /v1/players/{id}` (header `X-API-Key`) |
 | Tool call | `POST /v1/tools/{name}` (header `X-API-Key`; `ingest` also `X-Signature`) |
 | Read player (gRPC) | `GetPlayer` (metadata `x-api-key`) |

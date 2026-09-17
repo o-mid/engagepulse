@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/o-mid/engagepulse/internal/domain"
@@ -55,6 +56,7 @@ func main() {
 	baseURL := flag.String("url", "http://localhost:8080", "API base URL")
 	tenant := flag.String("tenant", "acme-casino", "tenant id")
 	secret := flag.String("secret", "hmac_acme_dev_secret", "HMAC secret")
+	keyID := flag.String("key-id", "v1", "HMAC key id (X-Key-Id)")
 	count := flag.Int("n", 8, "events to send")
 	mode := flag.String("mode", "vip", "vip or velocity")
 	flag.Parse()
@@ -74,6 +76,9 @@ func main() {
 		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Signature", ingest.Sign(*secret, body))
+		if strings.TrimSpace(*keyID) != "" {
+			req.Header.Set(ingest.HeaderKeyID, *keyID)
+		}
 		resp, err := client.Do(req)
 		if err != nil {
 			fail(err)

@@ -1,5 +1,5 @@
 import { apiBase, getTenants, type TenantId } from "./tenants";
-import { signBody } from "./hmac";
+import { signatureHeaders } from "./hmac";
 import type { IngestResult, MetricsMap, PlayerSnapshot } from "./types";
 
 type EventPayload = {
@@ -43,7 +43,7 @@ export async function ingestEvent(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Signature": signBody(tenant.hmacSecret, body),
+      ...signatureHeaders(tenant.hmacSecret, tenant.hmacKeyId, body),
     },
     body,
     cache: "no-store",
