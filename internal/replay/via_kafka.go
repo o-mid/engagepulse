@@ -21,57 +21,50 @@ import (
 	"github.com/o-mid/engagepulse/internal/worker"
 )
 
-type KafkaRun struct {
-	Brokers []string
-	Store   *store.Store
-	Worker  *worker.Worker
-}
-
-func RunViaKafka(ctx context.Context, run KafkaRun) (Report, error) {
+func RunViaKafka(ctx context.Context, st *store.Store, w *worker.Worker, brokers []string) (Report, error) {
 	var report Report
-	if run.Store == nil || run.Worker == nil {
+	if st == nil || w == nil {
 		return report, fmt.Errorf("store and worker required")
 	}
-	if len(run.Brokers) == 0 {
+	if len(brokers) == 0 {
 		return report, fmt.Errorf("kafka brokers required")
 	}
 
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	topic := "player.events.replay-" + suffix
 	dlqTopic := "player.events.dlq.replay-" + suffix
-	if err := kafka.EnsureTopic(run.Brokers, topic); err != nil {
+	if err := kafka.EnsureTopic(brokers, topic); err != nil {
 		return report, err
 	}
-	if err := kafka.EnsureTopic(run.Brokers, dlqTopic); err != nil {
+	if err := kafka.EnsureTopic(brokers, dlqTopic); err != nil {
 		return report, err
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	api := httpapi.New(run.Store, run.Store, logger)
+	api := httpapi.New(st, st, logger)
 	srv := httptest.NewServer(api.Handler())
 	defer srv.Close()
 
-	pub := kafka.NewProducer(run.Brokers, topic)
+	pub := kafka.NewProducer(brokers, topic)
 	defer func() { _ = pub.Close() }()
-	dlq := kafka.NewProducer(run.Brokers, dlqTopic)
+	dlq := kafka.NewProducer(brokers, dlqTopic)
 	defer func() { _ = dlq.Close() }()
 
 	consumer := kafka.NewConsumer(
-		run.Brokers,
+		brokers,
 		topic,
 		"engagepulse-replay-"+suffix,
 		logger,
-		run.Worker.Handle,
+		w.Handle,
 		dlq,
 	).WithRetry(kafka.MaxAttempts, time.Millisecond)
 	defer func() { _ = consumer.Close() }()
 
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	errCh := make(chan error, 1)
-	go func() { errCh <- consumer.Run(runCtx) }()
+	go func() { _ = consumer.Run(runCtx) }()
 
-	op := outbox.NewPublisher(run.Store, pub, logger)
+	op := outbox.NewPublisher(st, pub, logger)
 
 	for _, brand := range Brands {
 		events, want, err := LoadBrand(brand)
@@ -84,28 +77,28 @@ func RunViaKafka(ctx context.Context, run KafkaRun) (Report, error) {
 			events[i].EventID = events[i].EventID + "-" + suffix
 		}
 		var tenant store.Tenant
-		tenant, err = run.Store.GetTenant(ctx, want.TenantID)
+		tenant, err = st.GetTenant(ctx, want.TenantID)
 		if err != nil {
 			return report, fmt.Errorf("%s tenant: %w", brand, err)
 		}
 		if err = ingestAll(ctx, srv.URL, tenant, events); err != nil {
 			return report, err
 		}
-		if err = waitPublished(ctx, run.Store, op, events); err != nil {
+		if err = waitPublished(ctx, st, op, events); err != nil {
 			return report, err
 		}
-		var got domain.PlayerSnapshot
-		got, err = waitMatch(ctx, run.Store, want)
+		_, err = waitMatch(ctx, st, want)
 		if err != nil {
 			return report, fmt.Errorf("%s after kafka: %w", brand, err)
 		}
 		if err = ingestAll(ctx, srv.URL, tenant, events); err != nil {
 			return report, err
 		}
-		if err = waitPublished(ctx, run.Store, op, events); err != nil {
+		if err = waitPublished(ctx, st, op, events); err != nil {
 			return report, err
 		}
-		got, err = waitMatch(ctx, run.Store, want)
+		var got domain.PlayerSnapshot
+		got, err = waitMatch(ctx, st, want)
 		if err != nil {
 			return report, fmt.Errorf("%s after second ingest: %w", brand, err)
 		}

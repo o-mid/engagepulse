@@ -61,11 +61,7 @@ func TestReplayPacksViaKafka(t *testing.T) {
 	}
 
 	w := worker.New(st, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	report, err := replay.RunViaKafka(ctx, replay.KafkaRun{
-		Store:   st,
-		Worker:  w,
-		Brokers: []string{brokers},
-	})
+	report, err := replay.RunViaKafka(ctx, st, w, []string{brokers})
 	if err != nil {
 		t.Fatalf("replay kafka: %v", err)
 	}
