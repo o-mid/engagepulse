@@ -148,7 +148,7 @@ export function OpsPanels() {
                 <TableHead>Rule</TableHead>
                 <TableHead>Model</TableHead>
                 <TableHead>Agree</TableHead>
-                <TableHead>Note</TableHead>
+                <TableHead className="hidden sm:table-cell">Note</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -164,7 +164,9 @@ export function OpsPanels() {
                       <Badge variant="success-light">agree</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{row.note}</TableCell>
+                  <TableCell className="hidden max-w-[14rem] text-pretty text-muted-foreground sm:table-cell">
+                    {row.note}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

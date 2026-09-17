@@ -100,7 +100,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </SidebarFooter>
         </Sidebar>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col pb-16 md:pb-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
           <header className="flex items-center justify-between gap-2 border-b border-border px-3 py-2 md:hidden">
             <p className="text-sm font-semibold text-foreground">EngagePulse</p>
             <div className="flex items-center gap-2">
@@ -130,7 +130,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   asChild
                   variant={active ? "secondary" : "ghost"}
                   className={cn(
-                    "h-14 w-full flex-col gap-1 rounded-none text-xs",
+                    "h-14 w-full min-w-0 flex-col gap-1 rounded-none px-1 text-center text-[11px] leading-tight whitespace-normal",
                     active && "text-primary",
                   )}
                 >

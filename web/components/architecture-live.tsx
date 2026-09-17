@@ -18,9 +18,9 @@ export function ArchitectureLive() {
   const reading = liveReading(live, lag, selected);
 
   return (
-    <main id="main" className="mx-auto flex w-full max-w-[1600px] flex-col gap-8 px-4 py-5 md:px-6">
+    <main id="main" className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-8 px-4 py-5 md:px-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
             Architecture
           </h1>
@@ -112,7 +112,13 @@ export function ArchitectureLive() {
           <StatCard
             label="Credits"
             value={live ? live.credits.toLocaleString() : "—"}
-            description="ledger successes"
+            description={
+              !live
+                ? "ledger unique event ids"
+                : live.credits === 0
+                  ? "none yet (credits ≠ events)"
+                  : "unique event ids, not ingest count"
+            }
           />
         </div>
       </section>
