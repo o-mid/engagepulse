@@ -63,6 +63,23 @@ export async function ingestEvent(
   };
 }
 
+export async function postTool(
+  name: string,
+  body: Record<string, unknown> = {},
+): Promise<number> {
+  const tenant = getTenants()["acme-casino"];
+  const res = await fetch(`${apiBase()}/v1/tools/${encodeURIComponent(name)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": tenant.apiKey,
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  return res.status;
+}
+
 export async function parseMetrics(): Promise<MetricsMap> {
   const res = await fetch(`${apiBase()}/metrics`, { cache: "no-store" });
   if (!res.ok) throw new Error(`metrics ${res.status}`);

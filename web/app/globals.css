@@ -227,6 +227,24 @@ input {
   }
 }
 
+.arch-node:has(:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .arch-node:hover:not([data-selected="true"]) {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .arch-node[data-hot="true"]:not([data-selected="true"]) {
+    box-shadow: 0 0 0 1px var(--gauge-ok), var(--shadow-nested);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

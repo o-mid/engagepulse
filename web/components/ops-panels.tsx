@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ContractRun } from "@/components/contract-run";
 import {
   NOT_TOOLS,
   REPLAY_CONTRACT,
@@ -33,6 +34,8 @@ export function OpsPanels() {
   const tab = isTab(searchParams.get("tab")) ? searchParams.get("tab")! : "replay";
 
   return (
+    <div className="flex min-w-0 flex-col gap-6">
+      <ContractRun />
     <Tabs
       value={tab}
       onValueChange={(next) => {
@@ -45,10 +48,16 @@ export function OpsPanels() {
         });
       }}
     >
-      <TabsList aria-label="Ledger clients">
-        <TabsTrigger value="replay">Replay</TabsTrigger>
-        <TabsTrigger value="tools">Tools</TabsTrigger>
-        <TabsTrigger value="shadow">Shadow</TabsTrigger>
+      <TabsList aria-label="Ledger clients" className="flex w-full min-w-0 sm:inline-flex sm:w-auto">
+        <TabsTrigger value="replay" className="min-w-0 flex-1 sm:flex-none">
+          Replay
+        </TabsTrigger>
+        <TabsTrigger value="tools" className="min-w-0 flex-1 sm:flex-none">
+          Tools
+        </TabsTrigger>
+        <TabsTrigger value="shadow" className="min-w-0 flex-1 sm:flex-none">
+          Shadow
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="replay">
@@ -57,30 +66,43 @@ export function OpsPanels() {
           <code className="font-mono">testdata/replay/</code> through the worker
           and fails if player JSON drifts.
         </p>
-        <div className="mt-3">
+        <div className="mt-3 min-w-0">
           <Table>
-            <TableCaption>Expected replay player snapshots</TableCaption>
+            <TableCaption className="text-pretty pb-2">
+              Expected replay player snapshots
+            </TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead>Pack</TableHead>
-                <TableHead>Player</TableHead>
+                <TableHead className="hidden sm:table-cell">Player</TableHead>
                 <TableHead>VIP</TableHead>
                 <TableHead>Score</TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>Flag</TableHead>
-                <TableHead>Balance</TableHead>
+                <TableHead className="hidden sm:table-cell">Tags</TableHead>
+                <TableHead className="hidden sm:table-cell">Flag</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {REPLAY_CONTRACT.map((row) => (
                 <TableRow key={row.pack}>
-                  <TableCell className="font-mono">{row.pack}</TableCell>
-                  <TableCell className="font-mono">{row.playerId}</TableCell>
+                  <TableCell>
+                    <span className="block font-mono break-words">{row.pack}</span>
+                    <span className="mt-0.5 block font-mono text-xs break-words text-muted-foreground sm:hidden">
+                      {row.playerId}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden font-mono sm:table-cell">
+                    {row.playerId}
+                  </TableCell>
                   <TableCell>{row.vipTier}</TableCell>
                   <TableCell className="tabular-nums">{row.score}</TableCell>
-                  <TableCell className="font-mono">{row.tags}</TableCell>
-                  <TableCell className="font-mono">{row.flag}</TableCell>
-                  <TableCell className="tabular-nums">{row.balance}</TableCell>
+                  <TableCell className="hidden font-mono sm:table-cell">
+                    {row.tags}
+                  </TableCell>
+                  <TableCell className="hidden font-mono sm:table-cell">
+                    {row.flag}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{row.balance}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -126,10 +148,9 @@ export function OpsPanels() {
       </TabsContent>
 
       <TabsContent value="shadow">
-        <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-          <code className="font-mono">make shadow</code> scores recorded packs
-          against the velocity rule. The mock does not credit or set VIP. This
-          table is that mock contract, not a live model call.
+        <p className="mt-3 max-w-2xl text-pretty text-sm text-muted-foreground">
+          Shadow scores packs in memory. It does not credit or set VIP. The LLM
+          is not on the credit path.
         </p>
         <div className="mt-3">
           <Table>
@@ -140,7 +161,7 @@ export function OpsPanels() {
                 <TableHead>Rule</TableHead>
                 <TableHead>Model</TableHead>
                 <TableHead>Agree</TableHead>
-                <TableHead>Note</TableHead>
+                <TableHead className="hidden sm:table-cell">Note</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -156,7 +177,9 @@ export function OpsPanels() {
                       <Badge variant="success-light">agree</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{row.note}</TableCell>
+                  <TableCell className="hidden max-w-[14rem] text-pretty text-muted-foreground sm:table-cell">
+                    {row.note}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -164,5 +187,6 @@ export function OpsPanels() {
         </div>
       </TabsContent>
     </Tabs>
+    </div>
   );
 }

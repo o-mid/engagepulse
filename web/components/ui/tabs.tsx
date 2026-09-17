@@ -16,7 +16,7 @@ const TabsList = React.forwardRef<HTMLDivElement, TabsPrimitive.List.Props>(
     <TabsPrimitive.List
       ref={ref}
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-1 rounded-lg border border-[var(--gauge-well-border)] bg-input p-1 text-muted-foreground shadow-[var(--shadow-well)]",
+        "inline-flex min-h-10 min-w-0 flex-wrap items-center justify-start gap-1 rounded-lg border border-[var(--gauge-well-border)] bg-input p-1 text-muted-foreground shadow-[var(--shadow-well)] sm:justify-center",
         className
       )}
       {...props}
@@ -30,7 +30,7 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsPrimitive.Tab.Props>
     <TabsPrimitive.Tab
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium",
+        "inline-flex min-w-0 items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium sm:whitespace-nowrap",
         "transition-all duration-150 ease-out",
         "hover:text-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",

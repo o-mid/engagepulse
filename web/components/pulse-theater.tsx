@@ -2,6 +2,8 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { ArchitectureDiagram } from "@/components/architecture-diagram";
 import { EventTicker } from "@/components/event-ticker";
 import { FlashIcon } from "@/components/icons/flash";
 import { PipelineRail } from "@/components/pipeline-rail";
@@ -21,7 +23,9 @@ import {
   type DemoBeat,
   type StoryEvent,
 } from "@/lib/demo-script";
+import { liveReading, type ArchNodeId } from "@/lib/architecture";
 import { useApiHealth } from "@/lib/use-api-health";
+import { useLiveArchitecture } from "@/lib/use-live-architecture";
 import type { DemoResponse, IngestResult, MetricsMap, PlayerSnapshot } from "@/lib/types";
 
 export function PulseTheater() {
@@ -45,6 +49,8 @@ export function PulseTheater() {
   const [elapsed, setElapsed] = useState(0);
   const [showAllTape, setShowAllTape] = useState(false);
   const [payoff, setPayoff] = useState(false);
+  const [pathNode, setPathNode] = useState<ArchNodeId>("hmac");
+  const arch = useLiveArchitecture();
 
   const lit = useMemo(
     () => ({
@@ -156,31 +162,39 @@ export function PulseTheater() {
   const offline = health.online === false;
   const igniteDisabled = busy || offline;
   const showRun = busy || showDetails || beat !== "idle";
+  const beatHot = beatHotIds(beat);
+  const pathHot = [...new Set([...arch.hotIds, ...beatHot])];
+  const pathReading = liveReading(arch.live, arch.lag, pathNode);
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="relative flex min-h-0 flex-col">
       <PulseField running={busy || payoff} onReady={onFieldReady} />
 
       <main
         id="main"
         className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 px-4 py-4 md:px-6 md:py-5"
       >
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0 max-w-xl">
+        <header className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 w-full max-w-xl">
             <h1 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
               Credit-once, two tenants
             </h1>
-            <p className="mt-2 max-w-xl text-pretty text-base text-muted-foreground">
-              HMAC ingest, outbox, Kafka, then worker.
+            <p className="mt-2 w-full text-pretty break-words text-base text-muted-foreground">
+              Watch VIP on Acme, velocity on Nova. Same pipeline, different
+              outcome.
+            </p>
+            <p id="ignite-hint" className="mt-2 w-full text-pretty break-words text-sm text-muted-foreground">
+              Ignite signs both tenants in the BFF, writes the outbox, then GET
+              player.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
             <Button
               type="button"
               onClick={runDemo}
               disabled={igniteDisabled}
               aria-busy={busy}
-              aria-describedby={offline ? "arena-offline" : undefined}
+              aria-describedby={offline ? "arena-offline ignite-hint" : "ignite-hint"}
               size="lg"
             >
               <FlashIcon />
@@ -234,20 +248,44 @@ export function PulseTheater() {
           ) : null}
         </AnimatePresence>
 
-        <div
-          className={
-            showRun
-              ? "grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_18rem]"
-              : "grid min-h-0 flex-1 gap-4 lg:grid-cols-2"
-          }
-        >
+        <section aria-labelledby="start-path-heading">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                  <CardTitle id="start-path-heading">Event path</CardTitle>
+                  <p className="mt-1 w-full text-pretty break-words text-sm text-muted-foreground">
+                    HMAC sign in the BFF, verify in Go, outbox, Kafka, worker tx.
+                  </p>
+                </div>
+                <Button asChild variant="link" size="sm" className="h-auto shrink-0 px-0">
+                  <Link href="/architecture">Live counters</Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="min-w-0 pt-0">
+              <ArchitectureDiagram
+                selected={pathNode}
+                onSelect={setPathNode}
+                hotIds={pathHot}
+                variant="compact"
+                groupName="start-event-path"
+              />
+              <p className="mt-3 text-pretty text-sm text-muted-foreground">
+                {pathReading}
+              </p>
+            </CardContent>
+          </Card>
+        </section>
+
+        <div className="grid min-h-0 gap-4 lg:grid-cols-2">
           <TenantLane
             side="acme"
             title="Acme Casino"
             slug="acme-casino"
             subtitle="VIP path"
             emptyTitle="Waiting on Ignite"
-            emptyDetail="HMAC ingest, then GET this player. VIP score."
+            emptyDetail="VIP score after GET player. Same pipeline as Nova."
             player={acme}
             revealed={showAcme}
             focus={beat === "acme"}
@@ -259,23 +297,24 @@ export function PulseTheater() {
             title="Nova Sports"
             slug="nova-sports"
             subtitle="Velocity path"
-            emptyTitle="Waiting on Acme"
-            emptyDetail="Same worker tx. Burst bets set a velocity flag."
+            emptyTitle={showAcme && !showNova ? "Waiting on Acme" : "Waiting on Ignite"}
+            emptyDetail="Velocity flag after GET player. Same pipeline as Acme."
             player={nova}
             revealed={showNova}
             focus={beat === "nova"}
             outcome={showNova ? novaOutcome(nova) : ""}
           />
+        </div>
 
-          {showRun ? (
+        {showRun ? (
           <Card className="flex min-h-0 flex-col">
             <CardHeader className="pb-3">
               <CardTitle>This run</CardTitle>
             </CardHeader>
-            <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto pt-0">
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-4 pt-0">
               <PipelineRail beat={beat} caption={caption} />
               {payoff ? (
-                <p className="text-sm text-foreground">
+                <p className="text-pretty text-sm text-foreground">
                   {welcomeAlready
                     ? "Welcome already on the player. Second credit held."
                     : "Credit-once 100 on both tenants. VIP on Acme. Velocity on Nova."}
@@ -296,12 +335,18 @@ export function PulseTheater() {
                     delta.engagepulse_events_ingested_total?.toLocaleString() ??
                     "—"
                   }
+                  description="accepted events"
                 />
                 <StatCard
                   label="Credits"
                   value={
                     delta.engagepulse_ledger_credits_total?.toLocaleString() ??
                     "—"
+                  }
+                  description={
+                    (delta.engagepulse_ledger_credits_total ?? 0) === 0
+                      ? "none this run (credits ≠ events)"
+                      : "unique event ids, not ingest count"
                   }
                 />
               </div>
@@ -316,9 +361,18 @@ export function PulseTheater() {
               ) : null}
             </CardContent>
           </Card>
-          ) : null}
-        </div>
+        ) : null}
       </main>
     </div>
   );
+}
+
+function beatHotIds(beat: DemoBeat): ArchNodeId[] {
+  if (beat === "idle" || beat === "error") return [];
+  if (beat === "sign") return ["hmac"];
+  if (beat === "ingest") return ["hmac", "ingest", "outbox"];
+  if (beat === "stream") return ["kafka", "worker", "rules"];
+  if (beat === "acme" || beat === "nova") return ["ledger", "read"];
+  if (beat === "payoff") return ["ledger", "read"];
+  return [];
 }

@@ -3,7 +3,7 @@ import { PulseTheater } from "@/components/pulse-theater";
 
 export const metadata: Metadata = {
   title: "Arena",
-  description: "Live dual-tenant demo: HMAC ingest, outbox, Kafka, credit-once.",
+  description: "Dual-tenant demo and event path. HMAC ingest, outbox, Kafka, credit-once.",
 };
 
 export default function Home() {

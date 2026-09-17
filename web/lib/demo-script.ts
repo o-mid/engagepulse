@@ -18,7 +18,7 @@ export type StoryEvent = {
 };
 
 export const BEAT_CAPTION: Record<DemoBeat, string> = {
-  idle: "Press Ignite to run the happy path.",
+  idle: "Ignite posts signed events for both tenants, then GET player.",
   sign: "HMAC-SHA256 of the raw body. Secret stays in the BFF.",
   ingest: "Accept writes a Postgres outbox row, then returns 202.",
   stream: "Kafka delivers. Worker tx: mark, state, credit.",

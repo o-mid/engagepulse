@@ -45,7 +45,7 @@ function StatCard({
           )}
         </div>
         {(change || description) && (
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
             {change && (
               <span
                 className={cn(
@@ -62,7 +62,7 @@ function StatCard({
               </span>
             )}
             {description && (
-              <span className="text-xs text-muted-foreground">
+              <span className="min-w-0 text-pretty break-words text-xs text-muted-foreground">
                 {description}
               </span>
             )}
