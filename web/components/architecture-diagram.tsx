@@ -56,7 +56,7 @@ export function ArchitectureDiagram({
 
   return (
     <figure className="min-w-0">
-      <figcaption className={compact ? "sr-only" : "mb-3 text-pretty text-sm text-muted-foreground"}>
+      <figcaption className={compact ? "sr-only" : "mb-3 min-w-0 text-pretty break-words text-sm text-muted-foreground"}>
         Partner to GET player. HMAC is signed in the BFF and verified in Go.
         Worker retries three times, then DLQ.
       </figcaption>

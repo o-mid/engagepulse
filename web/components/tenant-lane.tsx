@@ -55,7 +55,7 @@ export function TenantLane({
   return (
     <Card
       className={cn(
-        "flex h-full min-h-64 flex-col md:min-h-80",
+        "flex h-full min-h-0 flex-col md:min-h-80",
         side === "acme" ? "lane-acme" : "lane-nova",
         className,
       )}

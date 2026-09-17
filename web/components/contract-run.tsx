@@ -56,24 +56,32 @@ export function ContractRun() {
 
   return (
     <Card>
-      <CardHeader className="flex min-w-0 flex-row flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
+      <CardHeader className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 w-full">
           <CardTitle>Run contract</CardTitle>
-          <p className="mt-1 text-pretty text-sm text-muted-foreground">
+          <p className="mt-1 w-full text-pretty break-words text-sm text-muted-foreground">
             Duplicate event_id, 404 on credit/set_vip, sparse-bets vs velocity.
           </p>
         </div>
-        <Button type="button" onClick={() => void run()} disabled={busy} aria-busy={busy}>
+        <Button
+          type="button"
+          onClick={() => void run()}
+          disabled={busy}
+          aria-busy={busy}
+          className="shrink-0 self-start sm:self-auto"
+        >
           {busy ? "Running probes" : "Run contract"}
         </Button>
       </CardHeader>
       <CardContent className="min-w-0 space-y-3">
-        <p className="text-pretty text-sm text-foreground">
-          The LLM is not on the credit path.
+        <p className="text-pretty break-words text-sm text-foreground">
+          The LLM is not on the credit path. HMAC is signed in the BFF and
+          verified in Go.
         </p>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         {result ? (
           <ul className="space-y-2 text-sm">
+            <li className="text-pretty text-muted-foreground">{result.hmac}</li>
             <li>
               <Badge variant={result.credit_once.pass ? "success-light" : "destructive-light"}>
                 {result.credit_once.pass ? "pass" : "fail"}

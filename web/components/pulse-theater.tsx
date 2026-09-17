@@ -167,28 +167,28 @@ export function PulseTheater() {
   const pathReading = liveReading(arch.live, arch.lag, pathNode);
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-auto">
+    <div className="relative flex min-h-0 flex-col">
       <PulseField running={busy || payoff} onReady={onFieldReady} />
 
       <main
         id="main"
         className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 px-4 py-4 md:px-6 md:py-5"
       >
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0 max-w-xl flex-1">
+        <header className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 w-full max-w-xl">
             <h1 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
               Credit-once, two tenants
             </h1>
-            <p className="mt-2 max-w-xl text-pretty text-base text-muted-foreground">
+            <p className="mt-2 w-full text-pretty break-words text-base text-muted-foreground">
               Watch VIP on Acme, velocity on Nova. Same pipeline, different
               outcome.
             </p>
-            <p id="ignite-hint" className="mt-2 max-w-xl text-pretty text-sm text-muted-foreground">
+            <p id="ignite-hint" className="mt-2 w-full text-pretty break-words text-sm text-muted-foreground">
               Ignite signs both tenants in the BFF, writes the outbox, then GET
               player.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
             <Button
               type="button"
               onClick={runDemo}
@@ -251,14 +251,14 @@ export function PulseTheater() {
         <section aria-labelledby="start-path-heading">
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex min-w-0 flex-wrap items-end justify-between gap-2">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                   <CardTitle id="start-path-heading">Event path</CardTitle>
-                  <p className="mt-1 text-pretty text-sm text-muted-foreground">
+                  <p className="mt-1 w-full text-pretty break-words text-sm text-muted-foreground">
                     HMAC sign in the BFF, verify in Go, outbox, Kafka, worker tx.
                   </p>
                 </div>
-                <Button asChild variant="link" size="sm" className="h-auto px-0">
+                <Button asChild variant="link" size="sm" className="h-auto shrink-0 px-0">
                   <Link href="/architecture">Live counters</Link>
                 </Button>
               </div>

@@ -30,7 +30,7 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsPrimitive.Tab.Props>
     <TabsPrimitive.Tab
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium",
+        "inline-flex min-w-0 items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium sm:whitespace-nowrap",
         "transition-all duration-150 ease-out",
         "hover:text-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",

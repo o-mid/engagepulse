@@ -18,7 +18,7 @@ export default function ContractPage() {
         <h1 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
           Replay and tools
         </h1>
-        <p className="mt-2 max-w-xl text-pretty text-base text-muted-foreground">
+        <p className="mt-2 max-w-xl text-pretty break-words text-base text-muted-foreground">
           Read-only clients of the ledger. They do not credit. The LLM is not on
           the credit path.
         </p>

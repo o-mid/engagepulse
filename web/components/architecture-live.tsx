@@ -19,16 +19,16 @@ export function ArchitectureLive() {
 
   return (
     <main id="main" className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-8 px-4 py-5 md:px-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0 flex-1">
+      <header className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 w-full max-w-xl">
           <h1 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
             Architecture
           </h1>
-          <p className="mt-2 max-w-xl text-pretty text-base text-muted-foreground">
+          <p className="mt-2 w-full text-pretty break-words text-base text-muted-foreground">
             Partners send signed events. Credits cannot pay twice.
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="shrink-0 self-start sm:self-auto">
           <Link href="/">Open Arena</Link>
         </Button>
       </header>

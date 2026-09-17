@@ -57,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <a href="#main">Skip to content</a>
       </Button>
-      <div className="flex min-h-svh bg-background">
+      <div className="flex h-svh overflow-hidden bg-background">
         <Sidebar className="hidden shrink-0 md:flex">
           <SidebarHeader>
             <p className="text-sm font-semibold tracking-tight text-foreground">
@@ -100,8 +100,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </SidebarFooter>
         </Sidebar>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
-          <header className="flex items-center justify-between gap-2 border-b border-border px-3 py-2 md:hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2 md:hidden">
             <p className="text-sm font-semibold text-foreground">EngagePulse</p>
             <div className="flex items-center gap-2">
               <StatusIndicator
@@ -112,7 +112,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="text-xs text-muted-foreground">{statusLabel}</p>
             </div>
           </header>
-          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0">
+            {children}
+          </div>
         </div>
       </div>
 
@@ -120,28 +122,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-label="Primary"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
       >
-        <ul className="grid grid-cols-3">
+        <ul className="grid min-w-0 grid-cols-3">
           {PRIMARY_NAV.map((item) => {
             const active = isActive(pathname, item.href);
             const Icon = ICONS[item.href];
             return (
-              <li key={item.href}>
-                <Button
-                  asChild
-                  variant={active ? "secondary" : "ghost"}
+              <li key={item.href} className="min-w-0">
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "h-14 w-full min-w-0 flex-col gap-1 rounded-none px-1 text-center text-[11px] leading-tight whitespace-normal",
-                    active && "text-primary",
+                    "flex h-auto min-h-14 w-full min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-center text-[11px] font-medium leading-tight",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
+                    active
+                      ? "bg-secondary text-primary"
+                      : "text-muted-foreground [@media(hover:hover)_and_(pointer:fine)]:hover:bg-secondary [@media(hover:hover)_and_(pointer:fine)]:hover:text-foreground",
                   )}
                 >
-                  <Link
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <Icon className="size-4" aria-hidden />
-                    {item.label}
-                  </Link>
-                </Button>
+                  <Icon className="size-4 shrink-0" aria-hidden />
+                  <span className="max-w-full text-balance">{item.label}</span>
+                </Link>
               </li>
             );
           })}

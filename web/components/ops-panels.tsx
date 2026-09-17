@@ -48,10 +48,16 @@ export function OpsPanels() {
         });
       }}
     >
-      <TabsList aria-label="Ledger clients">
-        <TabsTrigger value="replay">Replay</TabsTrigger>
-        <TabsTrigger value="tools">Tools</TabsTrigger>
-        <TabsTrigger value="shadow">Shadow</TabsTrigger>
+      <TabsList aria-label="Ledger clients" className="flex w-full min-w-0 sm:inline-flex sm:w-auto">
+        <TabsTrigger value="replay" className="min-w-0 flex-1 sm:flex-none">
+          Replay
+        </TabsTrigger>
+        <TabsTrigger value="tools" className="min-w-0 flex-1 sm:flex-none">
+          Tools
+        </TabsTrigger>
+        <TabsTrigger value="shadow" className="min-w-0 flex-1 sm:flex-none">
+          Shadow
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="replay">
@@ -61,35 +67,42 @@ export function OpsPanels() {
           and fails if player JSON drifts.
         </p>
         <div className="mt-3 min-w-0">
-          <Table className="min-w-0">
-            <TableCaption className="text-pretty">
+          <Table>
+            <TableCaption className="text-pretty pb-2">
               Expected replay player snapshots
             </TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead>Pack</TableHead>
-                <TableHead>Player</TableHead>
+                <TableHead className="hidden sm:table-cell">Player</TableHead>
                 <TableHead>VIP</TableHead>
                 <TableHead>Score</TableHead>
                 <TableHead className="hidden sm:table-cell">Tags</TableHead>
                 <TableHead className="hidden sm:table-cell">Flag</TableHead>
-                <TableHead>Balance</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {REPLAY_CONTRACT.map((row) => (
                 <TableRow key={row.pack}>
-                  <TableCell className="font-mono break-all">{row.pack}</TableCell>
-                  <TableCell className="font-mono break-all">{row.playerId}</TableCell>
+                  <TableCell>
+                    <span className="block font-mono break-words">{row.pack}</span>
+                    <span className="mt-0.5 block font-mono text-xs break-words text-muted-foreground sm:hidden">
+                      {row.playerId}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden font-mono sm:table-cell">
+                    {row.playerId}
+                  </TableCell>
                   <TableCell>{row.vipTier}</TableCell>
                   <TableCell className="tabular-nums">{row.score}</TableCell>
-                  <TableCell className="hidden font-mono break-all sm:table-cell">
+                  <TableCell className="hidden font-mono sm:table-cell">
                     {row.tags}
                   </TableCell>
                   <TableCell className="hidden font-mono sm:table-cell">
                     {row.flag}
                   </TableCell>
-                  <TableCell className="tabular-nums">{row.balance}</TableCell>
+                  <TableCell className="text-right tabular-nums">{row.balance}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
