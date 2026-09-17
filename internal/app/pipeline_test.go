@@ -347,6 +347,200 @@ func TestPoisonSignedEventRetriesThenKafkaDLQ(t *testing.T) {
 	}
 }
 
+// Proves: list last N dead letters, then a new signed ingest of the same event_id credits once.
+func TestDLQInspectThenRedriveCreditOnce(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	brokers := os.Getenv("KAFKA_BROKERS")
+	if dsn == "" || brokers == "" {
+		t.Skip("DATABASE_URL and KAFKA_BROKERS required")
+	}
+
+	ctx := context.Background()
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	topic := "player.events.redrive-" + suffix
+	dlqTopic := "player.events.dlq.redrive-" + suffix
+	if err := kafka.EnsureTopic([]string{brokers}, topic); err != nil {
+		t.Fatalf("topic: %v", err)
+	}
+	if err := kafka.EnsureTopic([]string{brokers}, dlqTopic); err != nil {
+		t.Fatalf("dlq topic: %v", err)
+	}
+
+	st, err := store.Open(ctx, dsn)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer st.Close()
+	if err = st.Migrate(ctx); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	api := httpapi.New(st, st, logger)
+	api.SetDLQ(kafka.NewInspector([]string{brokers}, dlqTopic))
+	srv := httptest.NewServer(api.Handler())
+	defer srv.Close()
+
+	tenantID := "acme-casino"
+	playerID := "redrive-player-" + suffix
+	eventID := "redrive-evt-" + suffix
+	tenant, err := st.GetTenant(ctx, tenantID)
+	if err != nil {
+		t.Fatalf("tenant: %v", err)
+	}
+
+	evt := domain.Event{
+		EventID:    eventID,
+		TenantID:   tenantID,
+		PlayerID:   playerID,
+		Type:       domain.EventDeposit,
+		Amount:     50,
+		OccurredAt: time.Now().UTC(),
+	}
+	dlqPub := kafka.NewProducer([]string{brokers}, dlqTopic)
+	if err = dlqPub.PublishDLQ(ctx, evt, "injected", kafka.MaxAttempts); err != nil {
+		t.Fatalf("publish dlq: %v", err)
+	}
+	if err = dlqPub.Close(); err != nil {
+		t.Fatalf("close dlq: %v", err)
+	}
+
+	listCtx, listCancel := context.WithTimeout(ctx, 15*time.Second)
+	defer listCancel()
+	var listed kafka.DeadLetter
+	for {
+		req, reqErr := http.NewRequest(http.MethodGet, srv.URL+"/v1/dlq?n=20", nil)
+		if reqErr != nil {
+			t.Fatalf("list request: %v", reqErr)
+		}
+		req.Header.Set("X-API-Key", "ak_acme_dev_001")
+		resp, doErr := http.DefaultClient.Do(req)
+		if doErr != nil {
+			t.Fatalf("list: %v", doErr)
+		}
+		var out struct {
+			Items []kafka.DeadLetter `json:"items"`
+		}
+		if err = json.NewDecoder(resp.Body).Decode(&out); err != nil {
+			_ = resp.Body.Close()
+			t.Fatalf("decode list: %v", err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("list status=%d", resp.StatusCode)
+		}
+		for _, item := range out.Items {
+			if item.Event.EventID == eventID {
+				listed = item
+				break
+			}
+		}
+		if listed.Event.EventID == eventID {
+			break
+		}
+		select {
+		case <-listCtx.Done():
+			t.Fatalf("letter %s not listed", eventID)
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
+	if listed.Attempts != kafka.MaxAttempts {
+		t.Fatalf("listed attempts=%d", listed.Attempts)
+	}
+
+	body, err := json.Marshal(evt)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/v1/events", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Signature", ingest.Sign(tenant.HMACSecret, body))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("redrive: %v", err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("redrive status=%d", resp.StatusCode)
+	}
+
+	pub := kafka.NewProducer([]string{brokers}, topic)
+	defer func() { _ = pub.Close() }()
+	consumerDLQ := kafka.NewProducer([]string{brokers}, dlqTopic)
+	defer func() { _ = consumerDLQ.Close() }()
+	w := worker.New(st, logger)
+	consumer := kafka.NewConsumer(
+		[]string{brokers},
+		topic,
+		"engagepulse-redrive-"+suffix,
+		logger,
+		w.Handle,
+		consumerDLQ,
+	)
+	defer func() { _ = consumer.Close() }()
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() { _ = consumer.Run(runCtx) }()
+
+	op := outbox.NewPublisher(st, pub, logger)
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		if err = op.FlushOnce(ctx); err != nil {
+			t.Fatalf("flush: %v", err)
+		}
+		row, getErr := st.GetOutbox(ctx, tenantID, eventID)
+		if getErr != nil {
+			t.Fatalf("outbox: %v", getErr)
+		}
+		if row.Status == store.OutboxPublished {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("outbox not published; status=%s", row.Status)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	var snap domain.PlayerSnapshot
+	for {
+		snap, err = st.GetPlayerSnapshot(ctx, tenantID, playerID)
+		if err == nil && snap.Balance > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("redrive not credited: %v balance=%d", err, snap.Balance)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	first := snap.Balance
+
+	req, err = http.NewRequest(http.MethodPost, srv.URL+"/v1/events", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Signature", ingest.Sign(tenant.HMACSecret, body))
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("second ingest: %v", err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("second ingest status=%d", resp.StatusCode)
+	}
+	time.Sleep(300 * time.Millisecond)
+	snap, err = st.GetPlayerSnapshot(ctx, tenantID, playerID)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if snap.Balance != first {
+		t.Fatalf("second redrive balance=%d want %d", snap.Balance, first)
+	}
+}
+
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
