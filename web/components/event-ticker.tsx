@@ -20,12 +20,10 @@ export function EventTicker({
 }: Props) {
   if (totalAccepted === 0) {
     return (
-      <div className="glass-panel corner-frame relative rounded-sm px-4 py-4">
-        <p className="mono text-[10px] uppercase tracking-[0.22em] text-[var(--fog-mute)]">
-          key moments
-        </p>
-        <p className="mono mt-3 text-[12px] text-[var(--fog-mute)]">
-          A few labeled beats will appear here — not every packet.
+      <div className="glass-panel relative rounded-sm px-4 py-4">
+        <h2 className="display text-lg text-[var(--fog)]">Key moments</h2>
+        <p className="mt-2 text-sm text-[var(--fog-dim)]">
+          Labeled beats appear here after Ignite. Not every packet.
         </p>
       </div>
     );
@@ -34,13 +32,11 @@ export function EventTicker({
   return (
     <div className="glass-panel rounded-sm px-4 py-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="mono text-[10px] uppercase tracking-[0.22em] text-[var(--fog-mute)]">
-          key moments
-        </p>
+        <h2 className="display text-lg text-[var(--fog)]">Key moments</h2>
         <button
           type="button"
           onClick={onToggle}
-          className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--fog-dim)] underline-offset-2 hover:underline"
+          className="focus-ring mono min-h-11 px-1 text-[11px] uppercase tracking-[0.16em] text-[var(--fog-dim)] underline decoration-[color-mix(in_oklab,var(--fog-dim)_40%,transparent)] underline-offset-4"
         >
           {showAll ? "hide full tape" : `show all ${totalAccepted} packets`}
         </button>
@@ -48,12 +44,11 @@ export function EventTicker({
 
       <ul className="mt-3 grid gap-2 sm:grid-cols-2">
         <AnimatePresence initial={false}>
-          {stories.map((s, i) => (
+          {stories.map((s) => (
             <motion.li
               key={s.id}
-              initial={{ opacity: 0, y: 8 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
               className="mono flex items-start justify-between gap-3 rounded-sm border border-[var(--line)] px-3 py-2 text-[12px]"
             >
               <div>
