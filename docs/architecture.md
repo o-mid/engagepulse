@@ -103,7 +103,9 @@ Code: `internal/store/outbox.go`, `internal/outbox/publisher.go`.
 
 Local demos can turn on `FAIL_INJECT=true`. Then an event id that starts with `poison-` fails after mark, retries three times, and lands on `player.events.dlq`. Default ingest is unchanged. Leave this off on the public API.
 
-Code: `internal/kafka/consumer.go`, `internal/kafka/dlq.go`.
+`GET /v1/dlq` (API key) lists the last N dead letters for that brand. Redrive is a new signed `POST /v1/events` of the same `event_id` — not an admin credit. Arena’s Architecture page shows the list; a human has to click Redrive. The ledger unique key still blocks a second bonus.
+
+Code: `internal/kafka/consumer.go`, `internal/kafka/dlq.go`, `internal/kafka/inspect.go`.
 
 ## Why bonus credits use a unique event id
 
@@ -143,6 +145,7 @@ Details: [concepts.md](./concepts.md). Code: `internal/rules`.
 | `POST /v1/hmac/rotate` | Header `X-API-Key`. Overlap window for that brand only. Response has key ids, not secrets. |
 | `POST /v1/tools/{name}` | Header `X-API-Key`; `ingest` also `X-Signature` of the event body |
 | `GET /v1/players/{id}` | Header `X-API-Key` |
+| `GET /v1/dlq` | Header `X-API-Key`; last N dead letters for that brand |
 | gRPC `GetPlayer` | metadata `x-api-key` |
 
 Unknown brand and bad signature both return **401** (same answer on purpose).
@@ -160,11 +163,12 @@ Useful coverage for this path:
 
 - worker rollback if processing fails after the mark (`internal/worker`)
 - bad HMAC / unknown tenant → 401, cross-tenant player read → 404 (`internal/api/httpapi`)
+- last N DLQ inspect + signed redrive credit-once (`internal/kafka`, `internal/api/httpapi`)
 - ledger credit-once under concurrent delivery (`internal/ledger`)
 
 ## Not in this project
 
 - Game UI / website for players
 - Real money payments
-- Full fraud team tools for DLQ messages
+- Auto-redrive of DLQ messages (inspect is read; redrive is a human click through HMAC ingest)
 - Machine-learning “personal offers”
