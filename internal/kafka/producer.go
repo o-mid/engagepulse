@@ -19,11 +19,13 @@ func NewProducer(brokers []string, topic string) *Producer {
 	return &Producer{
 		topic: topic,
 		writer: &kafkago.Writer{
-			Addr:         kafkago.TCP(brokers...),
-			Topic:        topic,
-			Balancer:     &kafkago.Hash{},
-			RequiredAcks: kafkago.RequireOne,
-			Async:        false,
+			Addr:                   kafkago.TCP(brokers...),
+			Topic:                  topic,
+			Balancer:               &kafkago.Hash{},
+			RequiredAcks:           kafkago.RequireOne,
+			Async:                  false,
+			AllowAutoTopicCreation: true,
+			WriteTimeout:           10 * time.Second,
 		},
 	}
 }
