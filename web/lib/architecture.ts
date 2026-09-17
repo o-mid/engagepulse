@@ -36,7 +36,7 @@ export const ARCH_NODES: ArchNode[] = [
     id: "ingest",
     label: "Ingest",
     plain: "Accept",
-    detail: "Validate JSON, resolve tenant, enqueue outbox, return 202.",
+    detail: "Validate JSON, resolve tenant, enqueue outbox, return 202. POST /v1/tools/ingest is the same accept path with X-API-Key plus HMAC.",
     code: "POST /v1/events",
   },
   {
@@ -78,7 +78,7 @@ export const ARCH_NODES: ArchNode[] = [
     id: "read",
     label: "Read",
     plain: "Player API",
-    detail: "HTTP or gRPC snapshot behind X-API-Key.",
+    detail: "HTTP or gRPC snapshot behind X-API-Key. POST /v1/tools/get_player and get_metrics read the same data. They do not credit or set VIP.",
     code: "GET /v1/players/{id}",
   },
 ];
