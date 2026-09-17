@@ -70,31 +70,66 @@ const SidebarFooter = React.forwardRef<
 ));
 SidebarFooter.displayName = "SidebarFooter";
 
-interface SidebarItemProps extends React.HTMLAttributes<HTMLButtonElement> {
+interface SidebarItemProps extends React.HTMLAttributes<HTMLElement> {
   icon?: React.ReactNode;
   label: string;
   active?: boolean;
   collapsed?: boolean;
+  asChild?: boolean;
 }
 
-const SidebarItem = React.forwardRef<HTMLButtonElement, SidebarItemProps>(
-  ({ className, icon, label, active, collapsed, ...props }, ref) => (
-    <button
-      ref={ref}
-      className={cn(
-        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150",
-        active
-          ? "bg-input text-primary shadow-[var(--shadow-well)]"
-          : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-        collapsed && "justify-center px-2",
-        className
-      )}
-      {...props}
-    >
-      {icon && <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
-      {!collapsed && <span className="truncate">{label}</span>}
-    </button>
-  )
+const SidebarItem = React.forwardRef<HTMLElement, SidebarItemProps>(
+  (
+    { className, icon, label, active, collapsed, asChild, children, ...props },
+    ref,
+  ) => {
+    const classes = cn(
+      "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium no-underline transition-all duration-150 motion-reduce:transition-none",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
+      active
+        ? "bg-input text-primary shadow-[var(--shadow-well)]"
+        : "text-muted-foreground [@media(hover:hover)_and_(pointer:fine)]:hover:bg-secondary [@media(hover:hover)_and_(pointer:fine)]:hover:text-foreground",
+      collapsed && "justify-center px-2",
+      className,
+    );
+    const inner = (
+      <>
+        {icon ? (
+          <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+        ) : null}
+        {!collapsed ? <span className="truncate">{label}</span> : null}
+      </>
+    );
+
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(
+        children as React.ReactElement<{
+          className?: string;
+          children?: React.ReactNode;
+        }>,
+        {
+          className: cn(
+            classes,
+            (children.props as { className?: string }).className,
+          ),
+          ref,
+          ...props,
+          children: inner,
+        } as never,
+      );
+    }
+
+    return (
+      <button
+        ref={ref as React.Ref<HTMLButtonElement>}
+        type="button"
+        className={classes}
+        {...props}
+      >
+        {inner}
+      </button>
+    );
+  },
 );
 SidebarItem.displayName = "SidebarItem";
 

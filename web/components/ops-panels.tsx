@@ -1,3 +1,6 @@
+"use client";
+
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   NOT_TOOLS,
   REPLAY_CONTRACT,
@@ -16,9 +19,32 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+const TABS = ["replay", "tools", "shadow"] as const;
+type ContractTab = (typeof TABS)[number];
+
+function isTab(value: string | null): value is ContractTab {
+  return TABS.includes(value as ContractTab);
+}
+
 export function OpsPanels() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const tab = isTab(searchParams.get("tab")) ? searchParams.get("tab")! : "replay";
+
   return (
-    <Tabs defaultValue="replay">
+    <Tabs
+      value={tab}
+      onValueChange={(next) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (next === "replay") params.delete("tab");
+        else params.set("tab", String(next));
+        const query = params.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
+      }}
+    >
       <TabsList aria-label="Ledger clients">
         <TabsTrigger value="replay">Replay</TabsTrigger>
         <TabsTrigger value="tools">Tools</TabsTrigger>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { OpsPanels } from "@/components/ops-panels";
 
 export const metadata: Metadata = {
@@ -14,14 +15,20 @@ export default function ContractPage() {
       className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-5 md:px-6"
     >
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+        <h1 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
           Replay and tools
         </h1>
         <p className="mt-2 max-w-xl text-base text-muted-foreground">
           Read-only clients of the ledger. They do not credit.
         </p>
       </header>
-      <OpsPanels />
+      <Suspense
+        fallback={
+          <p className="text-sm text-muted-foreground">Loading contract tables.</p>
+        }
+      >
+        <OpsPanels />
+      </Suspense>
     </main>
   );
 }
