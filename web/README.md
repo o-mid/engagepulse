@@ -1,14 +1,18 @@
-# EngagePulse · Pulse Arena (web)
+# EngagePulse console (web)
 
-Creative Next.js console for the EngagePulse Go service.
+Next.js App Router console for the Go service. HMAC is signed in the BFF. The browser never holds secrets.
 
-## What it showcases
+## Pages
 
-- Dual-tenant visual composition (Acme VIP vs Nova velocity)
-- Canvas pulse field reacting to signed ingest
-- Choreographed demo state machine (Framer Motion)
-- BFF routes that HMAC-sign event bodies — secrets never hit the browser
-- Live player snapshots + Prometheus counter parsing
+| Path | What a hiring manager sees |
+| --- | --- |
+| `/` | Arena. Dual-tenant stage (`acme-casino` VIP vs `nova-sports` velocity). Ignite runs HMAC, outbox, Kafka, worker tx, then GET player. |
+| `/architecture` | Live counters and the event path. Select a node. The reading at the bottom states the credit-once guarantee. |
+| `/contract` | `make replay` snapshot contract. Tools tab: `ingest` / `get_player` / `get_metrics`. Not tools: `credit` / `set_vip`. Shadow tab: mock vs velocity disagreements. |
+
+Tab URLs: `/contract?tab=tools`, `/contract?tab=shadow`.
+
+Shadow, tools, and replay are clients of the ledger. The credit path has no LLM. Nothing in this UI sets VIP or balance.
 
 ## Run
 
@@ -31,31 +35,16 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) and click **Ignite live demo**.
 
-Pages:
-
-| Path | What |
-| --- | --- |
-| `/` | Pulse Arena — guided dual-tenant demo |
-| `/architecture` | Live architecture — flow, metrics poll, reliability notes |
-
-## Demo recordings
-
-High-quality screen captures are attached to GitHub release **`v0.3.0`** (mp4 + posters). Links live in the root [README Demo video](../README.md#demo-video) section.
-
-## Live demo (already hosted)
+## Hosted demo
 
 | Piece | URL |
 | --- | --- |
-| Pulse Arena UI | [https://engagepulse-topaz.vercel.app](https://engagepulse-topaz.vercel.app) |
+| Console | [https://engagepulse-topaz.vercel.app](https://engagepulse-topaz.vercel.app) |
 | Go API | `https://api-production-2ef9b.up.railway.app` |
 
-Open the Arena and click **Ignite live demo**. The BFF signs events server-side and talks to the Railway API (Postgres + Apache Kafka). Local Compose still uses Redpanda — same Kafka protocol.
-
-If the API is unreachable, the Arena and Architecture pages show an offline banner with a link to the recorded `v0.3.0` Arena mp4.
+If the API is unreachable, Arena and Architecture show an offline banner with a link to the recorded `v0.3.0` Arena mp4.
 
 ### Vercel env
-
-Production UI expects:
 
 | Variable | Value |
 | --- | --- |
@@ -63,10 +52,8 @@ Production UI expects:
 | `ACME_API_KEY` / `ACME_HMAC_SECRET` | demo keys from `.env.local.example` |
 | `NOVA_API_KEY` / `NOVA_HMAC_SECRET` | demo keys from `.env.local.example` |
 
-Stale laptop tunnel URLs (`trycloudflare`, `ngrok`, etc.) in `ENGAGEPULSE_URL` are ignored; the BFF falls back to the hosted Railway API. On Vercel with no URL set, it also uses that hosted API.
+Stale laptop tunnel URLs (`trycloudflare`, `ngrok`, etc.) in `ENGAGEPULSE_URL` are ignored; the BFF falls back to the hosted Railway API.
 
-### Other ways to share
+## Demo recordings
 
-1. **Watch recordings** — `v0.3.0` release mp4s (no deploy).
-2. **Local + tunnel** — run Postgres, Redpanda, `make run`, and `npm run dev`, then tunnel `:3000` (e.g. Cloudflare Tunnel) for a temporary share.
-3. **Re-host the API** — deploy the Go binary with `HTTP_ADDR=0.0.0.0:8080`, a Postgres `DATABASE_URL`, and Kafka brokers; point Vercel `ENGAGEPULSE_URL` at that base URL.
+Screen captures are on GitHub release **`v0.3.0`**. Links live in the root [README Demo video](../README.md#demo-video) section.
