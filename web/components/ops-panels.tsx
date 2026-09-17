@@ -115,10 +115,10 @@ export function OpsPanels() {
             </TableBody>
           </Table>
         </div>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Not tools:{" "}
+        <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>Not tools</span>
           {NOT_TOOLS.map((name) => (
-            <Badge key={name} variant="destructive-light" className="ml-1">
+            <Badge key={name} variant="destructive-light">
               {name}
             </Badge>
           ))}

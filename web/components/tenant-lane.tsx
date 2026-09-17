@@ -96,10 +96,9 @@ export function TenantLane({
                 {player.player_id}
               </p>
               <p className="text-sm text-muted-foreground">
-                {player.vip_tier}
                 {progress?.next
-                  ? `, ${Math.round(progress.pct)}% to ${progress.next}`
-                  : ", gold"}
+                  ? `${player.vip_tier}, ${Math.round(progress.pct)}% to ${progress.next}`
+                  : player.vip_tier}
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
