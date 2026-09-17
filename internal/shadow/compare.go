@@ -33,6 +33,7 @@ func (b Board) Disagreements() []Row {
 	return out
 }
 
+// Compare scores recorded packs in memory. It does not open a store or credit the ledger.
 func Compare(ctx context.Context, s Scorer) (Board, error) {
 	var board Board
 	for _, name := range Packs {
