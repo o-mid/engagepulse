@@ -72,6 +72,8 @@ make demo
 
 `make rulepatch` prints an advisory diff for a request like `raise velocity threshold` and re-runs replay before/after. It does not write `internal/rules`. Copy the diff yourself if you want it. CI uses the mock proposer; `PROPOSER=openai` without `OPENAI_API_KEY` errors instead of falling back to mock.
 
+`make shadow` scores recorded replay bursts against the velocity rule and prints a disagreement board (`pack`, `rule`, `model`, `agree`). Mock is the default: flag when the pack has at least `VelocityBetLimit` bets. The 1-minute rule can disagree (see `testdata/replay/sparse-bets/`). Shadow does not credit or set VIP. CI uses the mock scorer; `SHADOW_SCORER=openai` without `OPENAI_API_KEY` errors instead of falling back to mock.
+
 ## Plain map of ideas → code
 
 | Idea | Where |
@@ -85,6 +87,7 @@ make demo
 | Worker mark + state + credit in one DB tx | `internal/worker`, `internal/store`, `internal/ledger` |
 | The three rules | `internal/rules` |
 | Advisory rule patch | `cmd/rulepatch`, `internal/rulepatch` |
+| Shadow flag vs velocity | `cmd/shadow`, `internal/shadow` |
 | Bonus credit without double-pay | `internal/ledger` |
 | Read player over HTTP / gRPC | `internal/api/httpapi`, `internal/api/grpcapi` |
 | HMAC / API-key / tenant isolation tests | `internal/api/httpapi/security_test.go` |
@@ -110,6 +113,7 @@ make demo
 | `make demo` | Guided end-to-end run |
 | `make replay` | Replay pack vs expected player JSON (needs `DATABASE_URL`) |
 | `make rulepatch` | Print an advisory rule diff and replay traces (not applied) |
+| `make shadow` | Print shadow vs velocity disagreement board (no credits) |
 | `make test` | Tests (set `DATABASE_URL` for DB tests) |
 
 ## Web console
