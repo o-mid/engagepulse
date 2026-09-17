@@ -31,6 +31,7 @@ func New(st *store.Store, accept EventAccepter, logger *slog.Logger) *Server {
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.Handle("GET /metrics", metrics.Handler())
 	s.mux.HandleFunc("POST /v1/events", s.handleIngest)
+	s.mux.HandleFunc("POST /v1/hmac/rotate", s.requireAPIKey(s.handleRotateHMAC))
 	s.mux.HandleFunc("POST /v1/tools/{name}", s.requireAPIKey(s.handleTool))
 	s.mux.HandleFunc("GET /v1/players/{id}", s.requireAPIKey(s.handleGetPlayer))
 	return s
@@ -85,7 +86,8 @@ func (s *Server) acceptSignedEvent(w http.ResponseWriter, r *http.Request, body 
 		return
 	}
 	// Verify against the raw body bytes, not a re-marshalled JSON form.
-	if err = ingest.Verify(tenant.HMACSecret, sig, body); err != nil {
+	keyID := r.Header.Get(ingest.HeaderKeyID)
+	if err = ingest.VerifyKeys(tenantHMACKeys(tenant, time.Now().UTC()), keyID, sig, body); err != nil {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}

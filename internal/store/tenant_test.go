@@ -23,10 +23,12 @@ func TestRotateAcmeLeavesNovaSecret(t *testing.T) {
 	if err = st.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-
-	t.Cleanup(func() {
+	if err = st.RestoreHMAC(ctx, "acme-casino", "v1", "hmac_acme_dev_secret"); err != nil {
+		t.Fatalf("restore start: %v", err)
+	}
+	defer func() {
 		_ = st.RestoreHMAC(ctx, "acme-casino", "v1", "hmac_acme_dev_secret")
-	})
+	}()
 
 	novaBefore, err := st.GetTenant(ctx, "nova-sports")
 	if err != nil {
