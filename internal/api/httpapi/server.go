@@ -31,6 +31,7 @@ func New(st *store.Store, accept EventAccepter, logger *slog.Logger) *Server {
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.Handle("GET /metrics", metrics.Handler())
 	s.mux.HandleFunc("POST /v1/events", s.handleIngest)
+	s.mux.HandleFunc("POST /v1/tools/{name}", s.requireAPIKey(s.handleTool))
 	s.mux.HandleFunc("GET /v1/players/{id}", s.requireAPIKey(s.handleGetPlayer))
 	return s
 }
@@ -50,7 +51,10 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "read body failed")
 		return
 	}
+	s.acceptSignedEvent(w, r, body, "")
+}
 
+func (s *Server) acceptSignedEvent(w http.ResponseWriter, r *http.Request, body []byte, requireTenantID string) {
 	var evt domain.Event
 	if err := json.Unmarshal(body, &evt); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json")
@@ -58,6 +62,10 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := ingest.ValidateEvent(evt); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if requireTenantID != "" && evt.TenantID != requireTenantID {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	if evt.OccurredAt.IsZero() {
