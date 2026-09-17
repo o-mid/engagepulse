@@ -43,7 +43,9 @@ export function PipelineRail({ beat, caption }: Props) {
         failed={failed}
         label="This run"
       />
-      <p className="mt-3 text-sm text-muted-foreground">{caption}</p>
+      <p className="mt-3 text-sm text-muted-foreground" aria-live="polite">
+        {caption}
+      </p>
     </div>
   );
 }

@@ -180,6 +180,7 @@ export function PulseTheater() {
               onClick={runDemo}
               disabled={igniteDisabled}
               aria-busy={busy}
+              aria-describedby={offline ? "arena-offline" : undefined}
               size="lg"
             >
               <FlashIcon />
@@ -196,13 +197,14 @@ export function PulseTheater() {
         <AnimatePresence>
           {offline && !error ? (
             <motion.div
+              id="arena-offline"
               initial={reduce ? false : { opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
             >
               <StatusBanner
                 title="Go service is offline"
-                detail="Ignite needs the hosted or local Go API. Watch the recorded run, or retry."
+                detail="Ignite needs the hosted Railway API or a local Go process. Open the recorded Arena demo, or retry."
                 onRetry={() => {
                   void health.refresh();
                 }}
@@ -242,9 +244,10 @@ export function PulseTheater() {
           <TenantLane
             side="acme"
             title="Acme Casino"
+            slug="acme-casino"
             subtitle="VIP path"
             emptyTitle="Waiting on Ignite"
-            emptyDetail="GET player fills this after ingest."
+            emptyDetail="HMAC ingest, then GET this player. VIP score."
             player={acme}
             revealed={showAcme}
             focus={beat === "acme"}
@@ -254,9 +257,10 @@ export function PulseTheater() {
           <TenantLane
             side="nova"
             title="Nova Sports"
+            slug="nova-sports"
             subtitle="Velocity path"
             emptyTitle="Waiting on Acme"
-            emptyDetail="Same path. Velocity flag."
+            emptyDetail="Same worker tx. Burst bets set a velocity flag."
             player={nova}
             revealed={showNova}
             focus={beat === "nova"}
@@ -274,7 +278,7 @@ export function PulseTheater() {
                 <p className="text-sm text-foreground">
                   {welcomeAlready
                     ? "Welcome already on the player. Second credit held."
-                    : "Welcome credited once. VIP gold. Velocity flagged."}
+                    : "Credit-once 100 on both tenants. VIP on Acme. Velocity on Nova."}
                 </p>
               ) : null}
               <RuleBeacons

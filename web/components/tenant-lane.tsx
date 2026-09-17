@@ -11,6 +11,7 @@ import type { PlayerSnapshot } from "@/lib/types";
 type Props = {
   side: "acme" | "nova";
   title: string;
+  slug: string;
   subtitle: string;
   emptyTitle: string;
   emptyDetail: string;
@@ -32,6 +33,7 @@ function tierProgress(score: number) {
 export function TenantLane({
   side,
   title,
+  slug,
   subtitle,
   emptyTitle,
   emptyDetail,
@@ -49,7 +51,7 @@ export function TenantLane({
 
   return (
     <Card
-      className={`flex h-full min-h-0 flex-col ${side === "acme" ? "lane-acme" : "lane-nova"}`}
+      className={`flex h-full min-h-80 flex-col ${side === "acme" ? "lane-acme" : "lane-nova"}`}
       style={{
         boxShadow: focus
           ? "var(--shadow-panel), var(--shadow-focus)"
@@ -64,6 +66,7 @@ export function TenantLane({
         >
           {title}
         </CardTitle>
+        <p className="font-mono text-xs text-muted-foreground">{slug}</p>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
       </CardHeader>
       <CardContent className="min-h-0 flex-1 pt-0">
