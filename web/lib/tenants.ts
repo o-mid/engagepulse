@@ -7,6 +7,7 @@ export type TenantConfig = {
   vibe: string;
   apiKey: string;
   hmacSecret: string;
+  hmacKeyId: string;
   playerId: string;
   mode: "vip" | "velocity";
 };
@@ -20,6 +21,7 @@ export function getTenants(): Record<TenantId, TenantConfig> {
       vibe: "VIP ascent",
       apiKey: process.env.ACME_API_KEY ?? "ak_acme_dev_001",
       hmacSecret: process.env.ACME_HMAC_SECRET ?? "hmac_acme_dev_secret",
+      hmacKeyId: process.env.ACME_HMAC_KEY_ID ?? "v1",
       playerId: "load-acme-casino-0",
       mode: "vip",
     },
@@ -30,6 +32,7 @@ export function getTenants(): Record<TenantId, TenantConfig> {
       vibe: "Velocity watch",
       apiKey: process.env.NOVA_API_KEY ?? "ak_nova_dev_001",
       hmacSecret: process.env.NOVA_HMAC_SECRET ?? "hmac_nova_dev_secret",
+      hmacKeyId: process.env.NOVA_HMAC_KEY_ID ?? "v1",
       playerId: "load-nova-sports-0",
       mode: "velocity",
     },
