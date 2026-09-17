@@ -22,16 +22,19 @@ func Dir() string {
 }
 
 func LoadBrand(brand string) ([]domain.Event, domain.PlayerSnapshot, error) {
-	base := filepath.Join(Dir(), brand)
-	events, err := loadEvents(filepath.Join(base, "events.jsonl"))
+	events, err := LoadEvents(brand)
 	if err != nil {
 		return nil, domain.PlayerSnapshot{}, err
 	}
-	want, err := loadExpected(filepath.Join(base, "expected-player.json"))
+	want, err := loadExpected(filepath.Join(Dir(), brand, "expected-player.json"))
 	if err != nil {
 		return nil, domain.PlayerSnapshot{}, err
 	}
 	return events, want, nil
+}
+
+func LoadEvents(brand string) ([]domain.Event, error) {
+	return loadEvents(filepath.Join(Dir(), brand, "events.jsonl"))
 }
 
 func loadEvents(path string) ([]domain.Event, error) {
