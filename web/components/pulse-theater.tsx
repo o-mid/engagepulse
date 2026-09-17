@@ -1,18 +1,19 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatedNumber } from "@/components/animated-number";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { EventTicker } from "@/components/event-ticker";
+import { FlashIcon } from "@/components/icons/flash";
 import { PipelineRail } from "@/components/pipeline-rail";
 import { PulseField, type PulseFieldHandle } from "@/components/pulse-field";
 import { RuleBeacons } from "@/components/rule-beacons";
-import { SiteNav } from "@/components/site-nav";
 import { StatusBanner } from "@/components/status-banner";
 import { TenantLane } from "@/components/tenant-lane";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   BEAT_CAPTION,
-  BEAT_PLAIN,
   acmeOutcome,
   novaOutcome,
   pickStoryEvents,
@@ -20,12 +21,14 @@ import {
   type DemoBeat,
   type StoryEvent,
 } from "@/lib/demo-script";
+import { useApiHealth } from "@/lib/use-api-health";
 import type { DemoResponse, IngestResult, MetricsMap, PlayerSnapshot } from "@/lib/types";
 
 export function PulseTheater() {
   const reduce = useReducedMotion();
   const fieldRef = useRef<PulseFieldHandle | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const health = useApiHealth();
 
   const [beat, setBeat] = useState<DemoBeat>("idle");
   const [busy, setBusy] = useState(false);
@@ -37,11 +40,9 @@ export function PulseTheater() {
   const [showNova, setShowNova] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [delta, setDelta] = useState<MetricsMap>({});
-  const [lifetime, setLifetime] = useState<MetricsMap>({});
   const [welcomeAlready, setWelcomeAlready] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [showAllTape, setShowAllTape] = useState(false);
   const [payoff, setPayoff] = useState(false);
 
@@ -68,41 +69,6 @@ export function PulseTheater() {
       ),
     [events],
   );
-
-  const probe = useCallback(async () => {
-    try {
-      const [healthRes, metricsRes] = await Promise.all([
-        fetch("/api/health", { cache: "no-store" }),
-        fetch("/api/metrics", { cache: "no-store" }),
-      ]);
-      const health = (await healthRes.json().catch(() => null)) as {
-        ok?: boolean;
-      } | null;
-      const online = !!health?.ok;
-      setApiOnline(online);
-      if (online && metricsRes.ok) {
-        setLifetime((await metricsRes.json()) as MetricsMap);
-      }
-      return online;
-    } catch {
-      setApiOnline(false);
-      return false;
-    }
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      if (!alive) return;
-      await probe();
-    };
-    void tick();
-    const id = window.setInterval(tick, 15_000);
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-    };
-  }, [probe]);
 
   const onFieldReady = useCallback((api: PulseFieldHandle) => {
     fieldRef.current = api;
@@ -151,11 +117,9 @@ export function PulseTheater() {
       const data = (await res.json()) as DemoResponse & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "demo failed");
 
-      setApiOnline(true);
       setEvents(data.accepted ?? []);
       setStories(pickStoryEvents(data.accepted ?? []));
       setDelta(data.metrics_delta ?? {});
-      setLifetime(data.metrics ?? {});
       setWelcomeAlready(!!data.notes?.welcome_already_credited);
       setShowDetails(true);
 
@@ -181,7 +145,7 @@ export function PulseTheater() {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setBeat("error");
       setError(err instanceof Error ? err.message : "demo failed");
-      void probe();
+      void health.refresh();
     } finally {
       setElapsed(Math.round(performance.now() - started));
       setBusy(false);
@@ -189,204 +153,159 @@ export function PulseTheater() {
   }
 
   const caption = BEAT_CAPTION[beat];
-  const offline = apiOnline === false;
+  const offline = health.online === false;
   const igniteDisabled = busy || offline;
-  const showStage = busy || showDetails || (beat !== "idle" && beat !== "error");
+  const showRun = busy || showDetails || beat !== "idle";
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <div className="aurora" />
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <PulseField running={busy || payoff} onReady={onFieldReady} />
-      <div className="vignette" />
-      <div className="scanlines" />
-      <div className="noise" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-14 pt-5 md:px-8">
-        <SiteNav apiOnline={apiOnline} />
-
-        <main id="main" className="flex flex-1 flex-col">
-          <AnimatePresence>
-            {offline && !error ? (
-              <motion.div
-                initial={reduce ? false : { opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-              >
-                <StatusBanner
-                  title="Go service is offline"
-                  detail="Ignite needs the Go service. Watch the recorded Arena run, or retry when it is up."
-                  onRetry={() => {
-                    void probe();
-                  }}
-                  retryLabel="Retry service"
-                />
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-
-          <header className="mt-8 max-w-2xl">
-            <h1 className="display text-balance text-4xl leading-[0.95] md:text-5xl">
-              Pulse Arena
+      <main
+        id="main"
+        className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 px-4 py-4 md:px-6 md:py-5"
+      >
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0 max-w-xl">
+            <h1 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
+              Credit-once, two tenants
             </h1>
-            <p className="mt-3 max-w-xl text-pretty text-base leading-relaxed text-[var(--fog-dim)] md:text-lg">
-              Ignite for Acme VIP, then Nova velocity.
+            <p className="mt-2 max-w-xl text-pretty text-base text-muted-foreground">
+              HMAC ingest, outbox, Kafka, then worker.
             </p>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={runDemo}
-                disabled={igniteDisabled}
-                aria-busy={busy}
-                className="btn-primary btn-shimmer focus-ring display relative min-h-11 overflow-hidden rounded-sm px-5 py-2.5 text-base disabled:cursor-not-allowed"
-              >
-                <span className="relative z-10">
-                  {busy ? "Running demo" : "Ignite live demo"}
-                </span>
-              </button>
-              <p className="mono text-[12px] text-[var(--fog-mute)]">
-                {BEAT_PLAIN[beat]}
-                {elapsed > 0 ? `, ${elapsed.toLocaleString()}ms` : ""}
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              onClick={runDemo}
+              disabled={igniteDisabled}
+              aria-busy={busy}
+              aria-describedby={offline ? "arena-offline" : undefined}
+              size="lg"
+            >
+              <FlashIcon />
+              {busy ? "Running demo" : "Ignite live demo"}
+            </Button>
+            {elapsed > 0 ? (
+              <p className="font-mono text-sm tabular-nums text-muted-foreground">
+                {elapsed.toLocaleString()} ms
               </p>
-            </div>
-          </header>
-
-          <AnimatePresence>
-            {error ? (
-              <motion.div
-                initial={reduce ? false : { opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-              >
-                <StatusBanner
-                  tone="error"
-                  title="Demo did not finish"
-                  detail={error}
-                  onRetry={() => {
-                    void runDemo();
-                  }}
-                  retryLabel="Retry demo"
-                />
-              </motion.div>
             ) : null}
-          </AnimatePresence>
+          </div>
+        </header>
 
-          <AnimatePresence>
-            {payoff ? (
-              <motion.div
-                initial={reduce ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="mt-6 rounded-sm border border-[var(--line)] bg-[rgba(240,194,127,0.06)] px-4 py-3"
-              >
-                <p className="display text-lg text-[var(--gold)]">
-                  Same ledger path. Different outcomes. No double credit.
-                </p>
-                <p className="mt-1 text-sm text-[var(--fog-mute)]">
-                  {welcomeAlready
-                    ? "Welcome already on the player. Idempotent credit held."
-                    : "Welcome credited once. VIP gold. Velocity flagged."}
-                </p>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-
-          {showStage ? (
-            <div className="mt-6">
-              <PipelineRail beat={beat} caption={caption} />
-            </div>
-          ) : beat === "idle" && !offline ? (
-            <p className="mt-8 max-w-xl text-sm text-[var(--fog-mute)]">
-              Lanes stay empty until Ignite.
-            </p>
+        <AnimatePresence>
+          {offline && !error ? (
+            <motion.div
+              id="arena-offline"
+              initial={reduce ? false : { opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
+              <StatusBanner
+                title="Go service is offline"
+                detail="Ignite needs the hosted Railway API or a local Go process. Open the recorded Arena demo, or retry."
+                onRetry={() => {
+                  void health.refresh();
+                }}
+                retryLabel="Retry service"
+              />
+            </motion.div>
           ) : null}
+        </AnimatePresence>
 
-          <AnimatePresence>
-            {showStage ? (
-              <motion.div
-                initial={reduce ? false : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.85fr]"
-              >
-                <div className="glass-panel relative grid overflow-hidden rounded-sm md:grid-cols-2">
-                  <TenantLane
-                    side="acme"
-                    title="Acme"
-                    subtitle="vip path"
-                    blurb="Deposit, heavy bets, VIP climbs, welcome credit."
-                    player={acme}
-                    revealed={showAcme}
-                    focus={beat === "acme"}
-                    outcome={showAcme ? acmeOutcome(acme) : ""}
-                    hideIntegrity
-                  />
-                  <TenantLane
-                    side="nova"
-                    title="Nova"
-                    subtitle="velocity path"
-                    blurb="Tight bet bursts, then an integrity velocity flag."
-                    player={nova}
-                    revealed={showNova}
-                    focus={beat === "nova"}
-                    outcome={showNova ? novaOutcome(nova) : ""}
-                  />
-                </div>
+        <AnimatePresence>
+          {error ? (
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
+              <StatusBanner
+                tone="error"
+                title="Demo did not finish"
+                detail={error}
+                onRetry={() => {
+                  void runDemo();
+                }}
+                retryLabel="Retry demo"
+              />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
-                <div className="flex flex-col gap-4">
-                  <RuleBeacons
-                    lit={lit}
-                    deltas={delta}
-                    welcomeAlready={welcomeAlready}
-                    velocityOnPlayer={
-                      showNova && nova?.integrity_flag === "velocity"
-                    }
-                  />
+        <div
+          className={
+            showRun
+              ? "grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_18rem]"
+              : "grid min-h-0 flex-1 gap-4 lg:grid-cols-2"
+          }
+        >
+          <TenantLane
+            side="acme"
+            title="Acme Casino"
+            slug="acme-casino"
+            subtitle="VIP path"
+            emptyTitle="Waiting on Ignite"
+            emptyDetail="HMAC ingest, then GET this player. VIP score."
+            player={acme}
+            revealed={showAcme}
+            focus={beat === "acme"}
+            outcome={showAcme ? acmeOutcome(acme) : ""}
+            hideIntegrity
+          />
+          <TenantLane
+            side="nova"
+            title="Nova Sports"
+            slug="nova-sports"
+            subtitle="Velocity path"
+            emptyTitle="Waiting on Acme"
+            emptyDetail="Same worker tx. Burst bets set a velocity flag."
+            player={nova}
+            revealed={showNova}
+            focus={beat === "nova"}
+            outcome={showNova ? novaOutcome(nova) : ""}
+          />
 
-                  <div className="glass-panel relative rounded-sm p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="mono text-[10px] uppercase tracking-[0.18em] text-[var(--fog-mute)]">
-                        this run
-                      </p>
-                      <p className="mono text-[10px] text-[var(--fog-mute)]">
-                        deltas, not lifetime
-                      </p>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-3">
-                      <Counter
-                        label="ingested +"
-                        value={delta.engagepulse_events_ingested_total}
-                      />
-                      <Counter
-                        label="processed +"
-                        value={delta.engagepulse_events_processed_total}
-                      />
-                      <Counter
-                        label="credits +"
-                        value={delta.engagepulse_ledger_credits_total}
-                      />
-                      <Counter
-                        label="packets"
-                        value={events.length || undefined}
-                      />
-                    </div>
-                    <p className="mono mt-3 text-[10px] text-[var(--fog-mute)]">
-                      lifetime ingested{" "}
-                      {(
-                        lifetime.engagepulse_events_ingested_total ?? 0
-                      ).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {showDetails ? (
-              <motion.div
-                initial={reduce ? false : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-5"
-              >
+          {showRun ? (
+          <Card className="flex min-h-0 flex-col">
+            <CardHeader className="pb-3">
+              <CardTitle>This run</CardTitle>
+            </CardHeader>
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto pt-0">
+              <PipelineRail beat={beat} caption={caption} />
+              {payoff ? (
+                <p className="text-sm text-foreground">
+                  {welcomeAlready
+                    ? "Welcome already on the player. Second credit held."
+                    : "Credit-once 100 on both tenants. VIP on Acme. Velocity on Nova."}
+                </p>
+              ) : null}
+              <RuleBeacons
+                lit={lit}
+                deltas={delta}
+                welcomeAlready={welcomeAlready}
+                velocityOnPlayer={
+                  showNova && nova?.integrity_flag === "velocity"
+                }
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <StatCard
+                  label="Ingested"
+                  value={
+                    delta.engagepulse_events_ingested_total?.toLocaleString() ??
+                    "—"
+                  }
+                />
+                <StatCard
+                  label="Credits"
+                  value={
+                    delta.engagepulse_ledger_credits_total?.toLocaleString() ??
+                    "—"
+                  }
+                />
+              </div>
+              {showDetails ? (
                 <EventTicker
                   stories={stories}
                   totalAccepted={events.length}
@@ -394,25 +313,12 @@ export function PulseTheater() {
                   onToggle={() => setShowAllTape((v) => !v)}
                   allLabels={allLabels}
                 />
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </main>
-      </div>
-    </div>
-  );
-}
-
-function Counter({ label, value }: { label: string; value?: number }) {
-  return (
-    <div className="rounded-sm border border-[var(--line)] px-3 py-2">
-      <p className="mono text-[10px] uppercase tracking-[0.18em] text-[var(--fog-mute)]">
-        {label}
-      </p>
-      <AnimatedNumber
-        value={value}
-        className="display mt-1 block text-2xl tabular-nums"
-      />
+              ) : null}
+            </CardContent>
+          </Card>
+          ) : null}
+        </div>
+      </main>
     </div>
   );
 }

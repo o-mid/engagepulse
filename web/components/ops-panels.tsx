@@ -1,144 +1,168 @@
+"use client";
+
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   NOT_TOOLS,
   REPLAY_CONTRACT,
   SHADOW_BOARD,
   TOOLS,
 } from "@/lib/ops-notes";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const TABS = ["replay", "tools", "shadow"] as const;
+type ContractTab = (typeof TABS)[number];
+
+function isTab(value: string | null): value is ContractTab {
+  return TABS.includes(value as ContractTab);
+}
 
 export function OpsPanels() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const tab = isTab(searchParams.get("tab")) ? searchParams.get("tab")! : "replay";
+
   return (
-    <section className="mt-8 space-y-6" aria-labelledby="ops-notes-heading">
-      <div>
-        <h2 id="ops-notes-heading" className="display text-xl">
-          Ops notes
-        </h2>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--fog-dim)]">
-          Read-only contract from the expansion. These tables do not call a
-          model and do not write VIP or balance. Writeup:{" "}
-          <a
-            href="https://github.com/o-mid/engagepulse/blob/develop/docs/architecture.md"
-            target="_blank"
-            rel="noreferrer"
-            className="focus-ring underline decoration-[color-mix(in_oklab,var(--gold)_40%,transparent)] underline-offset-4"
-          >
-            docs/architecture.md
-          </a>
-          .
-        </p>
-      </div>
+    <Tabs
+      value={tab}
+      onValueChange={(next) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (next === "replay") params.delete("tab");
+        else params.set("tab", String(next));
+        const query = params.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
+      }}
+    >
+      <TabsList aria-label="Ledger clients">
+        <TabsTrigger value="replay">Replay</TabsTrigger>
+        <TabsTrigger value="tools">Tools</TabsTrigger>
+        <TabsTrigger value="shadow">Shadow</TabsTrigger>
+      </TabsList>
 
-      <div className="glass-panel rounded-sm p-4">
-        <h3 className="display text-lg">Replay contract</h3>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--fog-dim)]">
-          <code className="mono">make replay</code> applies{" "}
-          <code className="mono">testdata/replay/</code> through the worker and
-          fails if player JSON drifts. <code className="mono">make demo</code> is
-          the guided tour. <code className="mono">make rulepatch</code> prints an
-          advisory diff; it does not write{" "}
-          <code className="mono">internal/rules</code>.
+      <TabsContent value="replay">
+        <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+          <code className="font-mono">make replay</code> applies{" "}
+          <code className="font-mono">testdata/replay/</code> through the worker
+          and fails if player JSON drifts.
         </p>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
-            <caption className="sr-only">Expected replay player snapshots</caption>
-            <thead>
-              <tr className="mono text-[11px] uppercase tracking-[0.14em] text-[var(--fog-mute)]">
-                <th className="py-2 pr-3 font-medium">pack</th>
-                <th className="py-2 pr-3 font-medium">player</th>
-                <th className="py-2 pr-3 font-medium">vip</th>
-                <th className="py-2 pr-3 font-medium">score</th>
-                <th className="py-2 pr-3 font-medium">tags</th>
-                <th className="py-2 pr-3 font-medium">flag</th>
-                <th className="py-2 font-medium">balance</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="mt-3">
+          <Table>
+            <TableCaption>Expected replay player snapshots</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Pack</TableHead>
+                <TableHead>Player</TableHead>
+                <TableHead>VIP</TableHead>
+                <TableHead>Score</TableHead>
+                <TableHead>Tags</TableHead>
+                <TableHead>Flag</TableHead>
+                <TableHead>Balance</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {REPLAY_CONTRACT.map((row) => (
-                <tr key={row.pack} className="border-t border-[var(--line)]">
-                  <td className="py-2 pr-3 mono">{row.pack}</td>
-                  <td className="py-2 pr-3 mono">{row.playerId}</td>
-                  <td className="py-2 pr-3">{row.vipTier}</td>
-                  <td className="py-2 pr-3 tabular-nums">{row.score}</td>
-                  <td className="py-2 pr-3 mono">{row.tags}</td>
-                  <td className="py-2 pr-3 mono">{row.flag}</td>
-                  <td className="py-2 tabular-nums">{row.balance}</td>
-                </tr>
+                <TableRow key={row.pack}>
+                  <TableCell className="font-mono">{row.pack}</TableCell>
+                  <TableCell className="font-mono">{row.playerId}</TableCell>
+                  <TableCell>{row.vipTier}</TableCell>
+                  <TableCell className="tabular-nums">{row.score}</TableCell>
+                  <TableCell className="font-mono">{row.tags}</TableCell>
+                  <TableCell className="font-mono">{row.flag}</TableCell>
+                  <TableCell className="tabular-nums">{row.balance}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
-      </div>
+      </TabsContent>
 
-      <div className="glass-panel rounded-sm p-4">
-        <h3 className="display text-lg">Shadow vs velocity</h3>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--fog-dim)]">
-          <code className="mono">make shadow</code> scores recorded packs against
-          the velocity rule. The mock flags when pack bets are at least 5. It
-          does not credit or set VIP. This table is that mock contract, not a
-          live model call.
+      <TabsContent value="tools">
+        <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+          <code className="font-mono">POST /v1/tools/{"{name}"}</code> wraps
+          partner ingest and reads. Auth is an API key. Unknown names return
+          404.
         </p>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
-            <caption className="sr-only">
-              Mock shadow scorer versus velocity rule
-            </caption>
-            <thead>
-              <tr className="mono text-[11px] uppercase tracking-[0.14em] text-[var(--fog-mute)]">
-                <th className="py-2 pr-3 font-medium">pack</th>
-                <th className="py-2 pr-3 font-medium">rule</th>
-                <th className="py-2 pr-3 font-medium">model</th>
-                <th className="py-2 pr-3 font-medium">agree</th>
-                <th className="py-2 font-medium">note</th>
-              </tr>
-            </thead>
-            <tbody>
-              {SHADOW_BOARD.map((row) => (
-                <tr key={row.pack} className="border-t border-[var(--line)]">
-                  <td className="py-2 pr-3 mono">{row.pack}</td>
-                  <td className="py-2 pr-3">{row.rule}</td>
-                  <td className="py-2 pr-3">{row.model}</td>
-                  <td className="py-2 pr-3">
-                    {row.agree === "no" ? "disagree" : "agree"}
-                  </td>
-                  <td className="py-2 text-[var(--fog-dim)]">{row.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="glass-panel rounded-sm p-4">
-        <h3 className="display text-lg">Allowlisted tools</h3>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--fog-dim)]">
-          <code className="mono">POST /v1/tools/{"{name}"}</code> wraps partner
-          ingest and reads. Auth is an API key. Unknown names return 404. There
-          is no credit tool and no set-VIP tool.
-        </p>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
-            <caption className="sr-only">Allowlisted HTTP tools</caption>
-            <thead>
-              <tr className="mono text-[11px] uppercase tracking-[0.14em] text-[var(--fog-mute)]">
-                <th className="py-2 pr-3 font-medium">name</th>
-                <th className="py-2 pr-3 font-medium">auth</th>
-                <th className="py-2 font-medium">does</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="mt-3">
+          <Table>
+            <TableCaption>Allowlisted HTTP tools</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Auth</TableHead>
+                <TableHead>Does</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {TOOLS.map((row) => (
-                <tr key={row.name} className="border-t border-[var(--line)]">
-                  <td className="py-2 pr-3 mono">{row.name}</td>
-                  <td className="py-2 pr-3 mono">{row.auth}</td>
-                  <td className="py-2 text-[var(--fog-dim)]">{row.does}</td>
-                </tr>
+                <TableRow key={row.name}>
+                  <TableCell className="font-mono">{row.name}</TableCell>
+                  <TableCell className="font-mono">{row.auth}</TableCell>
+                  <TableCell>{row.does}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
-        <p className="mt-3 text-sm text-[var(--fog-mute)]">
-          Not tools: {NOT_TOOLS.join(", ")}.
+        <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>Not tools</span>
+          {NOT_TOOLS.map((name) => (
+            <Badge key={name} variant="destructive-light">
+              {name}
+            </Badge>
+          ))}
         </p>
-      </div>
-    </section>
+      </TabsContent>
+
+      <TabsContent value="shadow">
+        <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+          <code className="font-mono">make shadow</code> scores recorded packs
+          against the velocity rule. The mock does not credit or set VIP. This
+          table is that mock contract, not a live model call.
+        </p>
+        <div className="mt-3">
+          <Table>
+            <TableCaption>Mock shadow scorer versus velocity rule</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Pack</TableHead>
+                <TableHead>Rule</TableHead>
+                <TableHead>Model</TableHead>
+                <TableHead>Agree</TableHead>
+                <TableHead>Note</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {SHADOW_BOARD.map((row) => (
+                <TableRow key={row.pack}>
+                  <TableCell className="font-mono">{row.pack}</TableCell>
+                  <TableCell>{row.rule}</TableCell>
+                  <TableCell>{row.model}</TableCell>
+                  <TableCell>
+                    {row.agree === "no" ? (
+                      <Badge variant="warning-light">disagree</Badge>
+                    ) : (
+                      <Badge variant="success-light">agree</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{row.note}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </TabsContent>
+    </Tabs>
   );
 }

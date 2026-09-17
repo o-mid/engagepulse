@@ -23,5 +23,26 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "components/ui/chart*.tsx",
+    "components/ui/calendar.tsx",
+    "components/ui/data-range-picker.tsx",
+    "components/ui/date-picker.tsx",
+    "components/ui/ix-accordion.tsx",
+    "components/ui/ix-expanding-search.tsx",
+    "components/ui/ix-floating-label.tsx",
+    "components/ui/ix-icon-morph.tsx",
+    "components/ui/ix-live-activity.tsx",
+    "components/ui/ix-modal.tsx",
+    "components/ui/ix-new-items-pill.tsx",
+    "components/ui/ix-pagination.tsx",
+    "components/ui/ix-popover.tsx",
+    "components/ui/ix-slider-detents.tsx",
+    "components/ui/ix-sortable-table.tsx",
+    "components/ui/ix-tabs.tsx",
+    "components/ui/ix-value-flash.tsx",
+    "components/ui/rating.tsx",
+    "components/ui/resizable.tsx"
+  ]
 }
