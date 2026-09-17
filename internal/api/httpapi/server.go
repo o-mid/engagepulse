@@ -25,15 +25,15 @@ type DLQLister interface {
 }
 
 type Server struct {
-	store  *store.Store
 	accept EventAccepter
 	dlq    DLQLister
+	store  *store.Store
 	logger *slog.Logger
 	mux    *http.ServeMux
 }
 
 func New(st *store.Store, accept EventAccepter, logger *slog.Logger) *Server {
-	s := &Server{store: st, accept: accept, logger: logger, mux: http.NewServeMux()}
+	s := &Server{accept: accept, store: st, logger: logger, mux: http.NewServeMux()}
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.Handle("GET /metrics", metrics.Handler())
 	s.mux.HandleFunc("POST /v1/events", s.handleIngest)

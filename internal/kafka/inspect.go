@@ -14,14 +14,14 @@ const maxInspect = 100
 
 // Inspector reads recent dead letters from a DLQ topic.
 type Inspector struct {
-	brokers []string
 	topic   string
+	brokers []string
 }
 
 func NewInspector(brokers []string, topic string) *Inspector {
 	copied := make([]string, len(brokers))
 	copy(copied, brokers)
-	return &Inspector{brokers: copied, topic: topic}
+	return &Inspector{topic: topic, brokers: copied}
 }
 
 func (i *Inspector) Recent(ctx context.Context, n int) ([]DeadLetter, error) {
