@@ -1,4 +1,4 @@
-.PHONY: build run fmt vet test up down logs migrate seed loadgen demo replay rulepatch
+.PHONY: build run fmt vet test up down logs migrate seed loadgen demo replay rulepatch shadow
 
 build:
 	go build -o bin/engagepulse ./cmd/engagepulse
@@ -43,3 +43,6 @@ replay:
 REQUEST ?= raise velocity threshold
 rulepatch:
 	go run ./cmd/rulepatch -request "$(REQUEST)"
+
+shadow:
+	go run ./cmd/shadow
