@@ -1,0 +1,23 @@
+{
+  "library": "carbon",
+  "prefix": "carbon",
+  "source": "iconify",
+  "installedAt": "2026-09-17T08:38:37.954Z",
+  "icons": [
+    "activity",
+    "chart-line",
+    "checkmark",
+    "compare",
+    "data-table",
+    "document-signed",
+    "error",
+    "flash",
+    "network-4",
+    "play",
+    "renew",
+    "security",
+    "tools",
+    "user",
+    "warning"
+  ]
+}

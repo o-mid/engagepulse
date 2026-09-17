@@ -57,7 +57,7 @@ export const ARCH_NODES: ArchNode[] = [
     id: "worker",
     label: "Worker",
     plain: "Process",
-    detail: "Dedupe by event_id, run rules, retry up to 3×.",
+    detail: "Dedupe by event_id, then one tx: mark processed, write state, credit. Retry up to 3×.",
     code: "internal/worker",
   },
   {

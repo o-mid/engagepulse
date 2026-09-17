@@ -19,13 +19,13 @@ export type StoryEvent = {
 
 export const BEAT_CAPTION: Record<DemoBeat, string> = {
   idle: "Press Ignite to run the happy path.",
-  sign: "Secure sign. HMAC stays in the BFF.",
-  ingest: "Accept. Events land in the outbox.",
-  stream: "Process. Kafka delivers to the worker.",
-  acme: "Acme VIP path. Score climbs, welcome lands.",
-  nova: "Nova velocity path. Burst bets raise a flag.",
-  payoff: "Same ledger path. Different outcomes. No double credit.",
-  error: "Backend unreachable. Watch the recorded Arena demo, or retry when the API is up.",
+  sign: "HMAC-SHA256 of the raw body. Secret stays in the BFF.",
+  ingest: "Accept writes a Postgres outbox row, then returns 202.",
+  stream: "Kafka delivers. Worker tx: mark, state, credit.",
+  acme: "GET player. VIP score and welcome credit.",
+  nova: "GET player. Burst bets raise a velocity flag.",
+  payoff: "Credit-once 100. Two tenants. Same ledger path.",
+  error: "Go API unreachable. Watch the recorded Arena demo, or retry.",
 };
 
 /** Recorded Arena demo when the live API is unreachable. */

@@ -71,13 +71,13 @@ export function PulseField({ running, onReady }: Props) {
     const paintGlow = () => {
       ctx.clearRect(0, 0, w, h);
       const g1 = ctx.createRadialGradient(w * 0.28, h * 0.52, 0, w * 0.28, h * 0.52, w * 0.38);
-      g1.addColorStop(0, "rgba(232,168,124,0.1)");
-      g1.addColorStop(1, "rgba(232,168,124,0)");
+      g1.addColorStop(0, "rgba(220,176,88,0.12)");
+      g1.addColorStop(1, "rgba(220,176,88,0)");
       ctx.fillStyle = g1;
       ctx.fillRect(0, 0, w, h);
       const g2 = ctx.createRadialGradient(w * 0.72, h * 0.52, 0, w * 0.72, h * 0.52, w * 0.38);
-      g2.addColorStop(0, "rgba(45,212,191,0.09)");
-      g2.addColorStop(1, "rgba(45,212,191,0)");
+      g2.addColorStop(0, "rgba(90,196,130,0.1)");
+      g2.addColorStop(1, "rgba(90,196,130,0)");
       ctx.fillStyle = g2;
       ctx.fillRect(0, 0, w, h);
     };
@@ -151,14 +151,14 @@ export function PulseField({ running, onReady }: Props) {
       ctx.clearRect(0, 0, w, h);
 
       const g1 = ctx.createRadialGradient(w * 0.28, h * 0.52, 0, w * 0.28, h * 0.52, w * 0.38);
-      g1.addColorStop(0, "rgba(232,168,124,0.14)");
-      g1.addColorStop(1, "rgba(232,168,124,0)");
+      g1.addColorStop(0, "rgba(220,176,88,0.16)");
+      g1.addColorStop(1, "rgba(220,176,88,0)");
       ctx.fillStyle = g1;
       ctx.fillRect(0, 0, w, h);
 
       const g2 = ctx.createRadialGradient(w * 0.72, h * 0.52, 0, w * 0.72, h * 0.52, w * 0.38);
-      g2.addColorStop(0, "rgba(45,212,191,0.13)");
-      g2.addColorStop(1, "rgba(45,212,191,0)");
+      g2.addColorStop(0, "rgba(90,196,130,0.14)");
+      g2.addColorStop(1, "rgba(90,196,130,0)");
       ctx.fillStyle = g2;
       ctx.fillRect(0, 0, w, h);
 
@@ -170,8 +170,8 @@ export function PulseField({ running, onReady }: Props) {
         ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
         ctx.fillStyle =
           o.hue === "acme"
-            ? `rgba(240,194,127,${0.25 + Math.sin(t + o.phase) * 0.12})`
-            : `rgba(125,211,252,${0.22 + Math.cos(t + o.phase) * 0.12})`;
+            ? `rgba(220,176,88,${0.25 + Math.sin(t + o.phase) * 0.12})`
+            : `rgba(90,196,130,${0.22 + Math.cos(t + o.phase) * 0.12})`;
         ctx.fill();
       }
 
@@ -188,8 +188,8 @@ export function PulseField({ running, onReady }: Props) {
           if (d > 120) continue;
           ctx.strokeStyle =
             a.hue === "acme"
-              ? `rgba(232,168,124,${0.08 * (1 - d / 120)})`
-              : `rgba(45,212,191,${0.08 * (1 - d / 120)})`;
+              ? `rgba(220,176,88,${0.08 * (1 - d / 120)})`
+              : `rgba(90,196,130,${0.08 * (1 - d / 120)})`;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
@@ -210,16 +210,16 @@ export function PulseField({ running, onReady }: Props) {
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.strokeStyle =
           p.hue === "acme"
-            ? `rgba(240,194,127,${alpha * 0.55})`
-            : `rgba(125,211,252,${alpha * 0.55})`;
+            ? `rgba(220,176,88,${alpha * 0.55})`
+            : `rgba(90,196,130,${alpha * 0.55})`;
         ctx.lineWidth = 1.4;
         ctx.stroke();
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r * 0.72, 0, Math.PI * 2);
         ctx.strokeStyle =
           p.hue === "acme"
-            ? `rgba(255,107,74,${alpha * 0.2})`
-            : `rgba(45,212,191,${alpha * 0.2})`;
+            ? `rgba(220,176,88,${alpha * 0.2})`
+            : `rgba(90,196,130,${alpha * 0.2})`;
         ctx.stroke();
         if (p.life <= 0 || p.r > p.max) pulses.splice(i, 1);
       }
@@ -232,8 +232,8 @@ export function PulseField({ running, onReady }: Props) {
         p.life -= 0.015;
         ctx.fillStyle =
           p.hue === "acme"
-            ? `rgba(255,107,74,${Math.max(p.life, 0)})`
-            : `rgba(45,212,191,${Math.max(p.life, 0)})`;
+            ? `rgba(220,176,88,${Math.max(p.life, 0)})`
+            : `rgba(90,196,130,${Math.max(p.life, 0)})`;
         ctx.fillRect(p.x, p.y, p.size, p.size);
         if (p.life <= 0) particles.splice(i, 1);
       }
