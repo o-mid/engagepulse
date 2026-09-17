@@ -12,14 +12,15 @@ export default function ContractPage() {
   return (
     <main
       id="main"
-      className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-5 md:px-6"
+      className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-6 px-4 py-5 md:px-6"
     >
-      <header>
+      <header className="min-w-0">
         <h1 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
           Replay and tools
         </h1>
-        <p className="mt-2 max-w-xl text-base text-muted-foreground">
-          Read-only clients of the ledger. They do not credit.
+        <p className="mt-2 max-w-xl text-pretty text-base text-muted-foreground">
+          Read-only clients of the ledger. They do not credit. The LLM is not on
+          the credit path.
         </p>
       </header>
       <Suspense
