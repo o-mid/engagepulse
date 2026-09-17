@@ -228,8 +228,8 @@ export function PulseTheater() {
             <h1 className="display text-balance text-4xl leading-[0.95] md:text-5xl">
               Pulse Arena
             </h1>
-            <p className="mt-3 text-base leading-relaxed text-[var(--fog-dim)] md:text-lg">
-              Two tenants, one path. Ignite for Acme VIP, then Nova velocity.
+            <p className="mt-3 max-w-xl text-pretty text-base leading-relaxed text-[var(--fog-dim)] md:text-lg">
+              Ignite for Acme VIP, then Nova velocity.
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <button

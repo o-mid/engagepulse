@@ -73,7 +73,6 @@ export function ArchitectureLive() {
 
       const previous = previousRef.current;
       const nextHot = new Set<ArchNodeId>();
-      if (next.ok) nextHot.add("ingest");
       if (previous) {
         if (next.ingested > previous.ingested) {
           nextHot.add("partner");
@@ -146,9 +145,8 @@ export function ArchitectureLive() {
             <h1 className="display text-balance text-4xl leading-[0.95] md:text-5xl">
               Architecture
             </h1>
-            <p className="mt-3 text-base text-[var(--fog-dim)] md:text-lg">
-              Partners send signed events through Kafka to a credit that cannot
-              pay twice.
+            <p className="mt-3 max-w-xl text-pretty text-base text-[var(--fog-dim)] md:text-lg">
+              Partners send signed events. Credits cannot pay twice.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
