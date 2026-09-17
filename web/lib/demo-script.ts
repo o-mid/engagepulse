@@ -106,16 +106,16 @@ export function acmeOutcome(player: PlayerSnapshot | null): string {
   if (!player) return "";
   const welcome = player.offer_tags?.includes("welcome_bonus");
   const tier = player.vip_tier?.toUpperCase() ?? "—";
-  if (welcome) return `${tier} · welcome credited`;
-  return `${tier} · VIP path complete`;
+  if (welcome) return `${tier}, welcome credited`;
+  return `${tier}, VIP path complete`;
 }
 
 export function novaOutcome(player: PlayerSnapshot | null): string {
   if (!player) return "";
   if (player.integrity_flag === "velocity") {
-    return "velocity flagged · integrity watch";
+    return "velocity flagged, integrity watch";
   }
-  return `${player.vip_tier?.toUpperCase() ?? "—"} · processed`;
+  return `${player.vip_tier?.toUpperCase() ?? "—"}, processed`;
 }
 
 export function wait(ms: number, signal?: AbortSignal) {

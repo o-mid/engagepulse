@@ -4,7 +4,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { EventTicker } from "@/components/event-ticker";
-import { OpsPanels } from "@/components/ops-panels";
 import { PipelineRail } from "@/components/pipeline-rail";
 import { PulseField, type PulseFieldHandle } from "@/components/pulse-field";
 import { RuleBeacons } from "@/components/rule-beacons";
@@ -214,24 +213,23 @@ export function PulseTheater() {
                 exit={{ opacity: 0 }}
               >
                 <StatusBanner
-                  title="Live API is offline"
-                  detail="Ignite needs the Go service. Watch the recorded Arena run, or retry when the API is up."
+                  title="Go service is offline"
+                  detail="Ignite needs the Go service. Watch the recorded Arena run, or retry when it is up."
                   onRetry={() => {
                     void probe();
                   }}
-                  retryLabel="Retry API"
+                  retryLabel="Retry service"
                 />
               </motion.div>
             ) : null}
           </AnimatePresence>
 
           <header className="mt-8 max-w-2xl">
-            <h1 className="display text-4xl leading-[0.95] md:text-5xl">
+            <h1 className="display text-balance text-4xl leading-[0.95] md:text-5xl">
               Pulse Arena
             </h1>
             <p className="mt-3 text-base leading-relaxed text-[var(--fog-dim)] md:text-lg">
-              Two tenants, one ledger path. Ignite to watch VIP on Acme, then a
-              velocity flag on Nova.
+              Two tenants, one path. Ignite for Acme VIP, then Nova velocity.
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <button
@@ -247,7 +245,7 @@ export function PulseTheater() {
               </button>
               <p className="mono text-[12px] text-[var(--fog-mute)]">
                 {BEAT_PLAIN[beat]}
-                {elapsed > 0 ? ` · ${elapsed.toLocaleString()}ms` : ""}
+                {elapsed > 0 ? `, ${elapsed.toLocaleString()}ms` : ""}
               </p>
             </div>
           </header>
@@ -298,8 +296,7 @@ export function PulseTheater() {
             </div>
           ) : beat === "idle" && !offline ? (
             <p className="mt-8 max-w-xl text-sm text-[var(--fog-mute)]">
-              Tenant lanes stay empty until Ignite. HMAC signing stays in the
-              BFF.
+              Lanes stay empty until Ignite.
             </p>
           ) : null}
 
@@ -400,8 +397,6 @@ export function PulseTheater() {
               </motion.div>
             ) : null}
           </AnimatePresence>
-
-          <OpsPanels />
         </main>
       </div>
     </div>

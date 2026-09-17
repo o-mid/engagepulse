@@ -133,22 +133,22 @@ export function ArchitectureLive() {
         <main id="main">
           {offline ? (
             <StatusBanner
-              title="Live API is offline"
-              detail="Metrics on this page will not move. Watch the recorded Arena run, or retry when the API is up."
+              title="Go service is offline"
+              detail="Counters on this page will not move. Watch the recorded Arena run, or retry when the service is up."
               onRetry={() => {
                 void tick();
               }}
-              retryLabel="Retry API"
+              retryLabel="Retry service"
             />
           ) : null}
 
           <header className="mt-8 max-w-2xl">
-            <h1 className="display text-4xl leading-[0.95] md:text-5xl">
+            <h1 className="display text-balance text-4xl leading-[0.95] md:text-5xl">
               Architecture
             </h1>
             <p className="mt-3 text-base text-[var(--fog-dim)] md:text-lg">
-              One Go binary: signed ingest, outbox, Kafka, rules, ledger-safe
-              credits. This page polls /healthz and /metrics.
+              Partners send signed events through Kafka to a credit that cannot
+              pay twice.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
@@ -157,14 +157,6 @@ export function ArchitectureLive() {
               >
                 Open Pulse Arena
               </Link>
-              <a
-                href="https://github.com/o-mid/engagepulse/blob/develop/docs/architecture.md"
-                target="_blank"
-                rel="noreferrer"
-                className="focus-ring mono inline-flex min-h-11 items-center rounded-sm border border-[var(--line)] px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-[var(--fog-mute)]"
-              >
-                docs/architecture.md
-              </a>
             </div>
           </header>
 
@@ -184,7 +176,7 @@ export function ArchitectureLive() {
               <LiveCard
                 label="API"
                 value={live ? (live.ok ? "online" : "offline") : "…"}
-                hint={live ? `${live.latencyMs}ms · /healthz` : "probing"}
+                hint={live ? `${live.latencyMs}ms, /healthz` : "probing"}
                 tone={live?.ok ? "good" : "bad"}
               />
               <LiveCard
@@ -242,7 +234,7 @@ export function ArchitectureLive() {
                     >
                       <span className="mono text-[10px] text-[var(--fog-mute)]">
                         {String(i + 1).padStart(2, "0")}
-                        {isHot ? " · hot" : ""}
+                        {isHot ? ", hot" : ""}
                       </span>
                       <span className="display text-sm text-[var(--fog)]">
                         {node.label}
@@ -365,7 +357,7 @@ function LiveCard({
       ) : (
         <p className="display text-2xl" style={{ color }}>
           {value}
-          {tone === "bad" ? " · fault" : tone === "good" ? "" : ""}
+          {tone === "bad" ? " (fault)" : ""}
         </p>
       )}
       <p className="mono mt-1 text-[11px] uppercase tracking-[0.16em] text-[var(--fog-mute)]">

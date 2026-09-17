@@ -56,10 +56,10 @@ export function SiteNav({ apiOnline }: Props) {
             aria-hidden
           />
           {apiOnline == null
-            ? "API probing"
+            ? "Go service probing"
             : apiOnline
-              ? "API online"
-              : "API offline"}
+              ? "Go service online"
+              : "Go service offline"}
         </p>
       )}
     </nav>

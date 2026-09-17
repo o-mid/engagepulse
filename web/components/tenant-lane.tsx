@@ -68,7 +68,7 @@ export function TenantLane({
         </h2>
         <p className="mono mt-1 text-[11px] uppercase tracking-[0.16em] text-[var(--fog-mute)]">
           {subtitle}
-          {focus ? " · live" : revealed ? " · resolved" : " · waiting"}
+          {focus ? ", live" : revealed ? ", resolved" : ", waiting"}
         </p>
         <p className="mt-2 max-w-xs text-sm leading-relaxed text-[var(--fog-dim)]">
           {blurb}
@@ -118,8 +118,8 @@ export function TenantLane({
                     <p className="mono mt-1 text-[11px] text-[var(--fog-mute)]">
                       {player.vip_tier}
                       {progress?.next
-                        ? ` · ${Math.round(progress.pct)}% to ${progress.next}`
-                        : " · gold"}
+                        ? `, ${Math.round(progress.pct)}% to ${progress.next}`
+                        : ", gold"}
                     </p>
                   </div>
                   <div className="relative h-[72px] w-[72px] shrink-0" aria-hidden>
