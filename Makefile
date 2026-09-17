@@ -1,4 +1,4 @@
-.PHONY: build run fmt vet test up down logs migrate seed loadgen demo
+.PHONY: build run fmt vet test up down logs migrate seed loadgen demo replay
 
 build:
 	go build -o bin/engagepulse ./cmd/engagepulse
@@ -36,3 +36,6 @@ loadgen:
 
 demo:
 	bash ./scripts/demo.sh
+
+replay:
+	go test ./internal/replay -count=1
