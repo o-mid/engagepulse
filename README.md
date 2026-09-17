@@ -68,6 +68,8 @@ make demo
 | `acme-casino` | Welcome bonus + VIP going up | `welcome_bonus`, VIP `silver` or `gold`, `balance: 100` |
 | `nova-sports` | Betting too fast | `welcome_bonus`, `integrity_flag: velocity`, `balance: 100` |
 
+`make replay` is the contract for those two brands: it applies `testdata/replay/` through the worker and fails if the player JSON drifts. `make demo` is the guided tour of the same outcomes against a running API.
+
 ## Plain map of ideas → code
 
 | Idea | Where |
@@ -102,6 +104,7 @@ make demo
 | `make migrate` | Create / update tables (+ seed brands) |
 | `make loadgen` | Send signed events |
 | `make demo` | Guided end-to-end run |
+| `make replay` | Replay pack vs expected player JSON (needs `DATABASE_URL`) |
 | `make test` | Tests (set `DATABASE_URL` for DB tests) |
 
 ## Web console
@@ -120,7 +123,7 @@ Open [http://localhost:3000](http://localhost:3000) and click **Ignite live demo
 
 See [web/README.md](web/README.md) for pages, env vars, and hosting notes.
 
-CI runs `gofmt`, `go vet`, `golangci-lint`, and `go test ./... -p 1` on `main` / `develop`.
+CI runs `gofmt`, `go vet`, `golangci-lint`, `go test ./... -p 1`, and `make replay` on `main` / `develop`.
 
 ## Docs
 
