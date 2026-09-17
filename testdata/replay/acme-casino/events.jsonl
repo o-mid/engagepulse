@@ -1,0 +1,4 @@
+{"event_id":"replay-acme-deposit-1","tenant_id":"acme-casino","player_id":"replay-acme-casino-0","type":"deposit","amount":50,"occurred_at":"2026-01-01T00:00:00Z"}
+{"event_id":"replay-acme-bet-1","tenant_id":"acme-casino","player_id":"replay-acme-casino-0","type":"bet_placed","amount":700,"occurred_at":"2026-01-01T00:00:01Z"}
+{"event_id":"replay-acme-bet-2","tenant_id":"acme-casino","player_id":"replay-acme-casino-0","type":"bet_placed","amount":1000,"occurred_at":"2026-01-01T00:00:02Z"}
+{"event_id":"replay-acme-bet-3","tenant_id":"acme-casino","player_id":"replay-acme-casino-0","type":"bet_placed","amount":1300,"occurred_at":"2026-01-01T00:00:03Z"}

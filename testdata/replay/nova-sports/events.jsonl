@@ -1,0 +1,8 @@
+{"event_id":"replay-nova-deposit-1","tenant_id":"nova-sports","player_id":"replay-nova-sports-0","type":"deposit","amount":50,"occurred_at":"2026-01-01T00:00:00Z"}
+{"event_id":"replay-nova-bet-1","tenant_id":"nova-sports","player_id":"replay-nova-sports-0","type":"bet_placed","amount":10,"occurred_at":"2026-01-01T00:00:01Z"}
+{"event_id":"replay-nova-bet-2","tenant_id":"nova-sports","player_id":"replay-nova-sports-0","type":"bet_placed","amount":10,"occurred_at":"2026-01-01T00:00:02Z"}
+{"event_id":"replay-nova-bet-3","tenant_id":"nova-sports","player_id":"replay-nova-sports-0","type":"bet_placed","amount":10,"occurred_at":"2026-01-01T00:00:03Z"}
+{"event_id":"replay-nova-bet-4","tenant_id":"nova-sports","player_id":"replay-nova-sports-0","type":"bet_placed","amount":10,"occurred_at":"2026-01-01T00:00:04Z"}
+{"event_id":"replay-nova-bet-5","tenant_id":"nova-sports","player_id":"replay-nova-sports-0","type":"bet_placed","amount":10,"occurred_at":"2026-01-01T00:00:05Z"}
+{"event_id":"replay-nova-bet-6","tenant_id":"nova-sports","player_id":"replay-nova-sports-0","type":"bet_placed","amount":10,"occurred_at":"2026-01-01T00:00:06Z"}
+{"event_id":"replay-nova-bet-7","tenant_id":"nova-sports","player_id":"replay-nova-sports-0","type":"bet_placed","amount":10,"occurred_at":"2026-01-01T00:00:07Z"}
