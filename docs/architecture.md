@@ -101,6 +101,8 @@ Code: `internal/store/outbox.go`, `internal/outbox/publisher.go`.
 3. Only then mark the original Kafka message as done.
 4. If even the DLQ write fails, we do **not** mark it done, so Kafka can deliver it again.
 
+Local demos can turn on `FAIL_INJECT=true`. Then an event id that starts with `poison-` fails after mark, retries three times, and lands on `player.events.dlq`. Default ingest is unchanged. Leave this off on the public API.
+
 Code: `internal/kafka/consumer.go`, `internal/kafka/dlq.go`.
 
 ## Why bonus credits use a unique event id
