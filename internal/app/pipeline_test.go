@@ -35,7 +35,9 @@ func TestIngestThroughSnapshot(t *testing.T) {
 	topic := envOr("KAFKA_TOPIC", "player.events")
 
 	ctx := context.Background()
-	ensureKafkaTopic(t, brokers, topic)
+	if err := kafka.EnsureTopic([]string{brokers}, topic); err != nil {
+		t.Fatalf("topic: %v", err)
+	}
 
 	st, err := store.Open(ctx, dsn)
 	if err != nil {
@@ -183,8 +185,12 @@ func TestPoisonSignedEventRetriesThenKafkaDLQ(t *testing.T) {
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	topic := "player.events.poison-" + suffix
 	dlqTopic := "player.events.dlq.poison-" + suffix
-	ensureKafkaTopic(t, brokers, topic)
-	ensureKafkaTopic(t, brokers, dlqTopic)
+	if err := kafka.EnsureTopic([]string{brokers}, topic); err != nil {
+		t.Fatalf("topic: %v", err)
+	}
+	if err := kafka.EnsureTopic([]string{brokers}, dlqTopic); err != nil {
+		t.Fatalf("dlq topic: %v", err)
+	}
 
 	st, err := store.Open(ctx, dsn)
 	if err != nil {
@@ -346,39 +352,4 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
-}
-
-// Create the topic up front so publish does not race Redpanda auto-create.
-func ensureKafkaTopic(t *testing.T, brokers, topic string) {
-	t.Helper()
-	conn, err := kafkago.Dial("tcp", brokers)
-	if err != nil {
-		t.Fatalf("kafka dial: %v", err)
-	}
-	defer func() { _ = conn.Close() }()
-	controller, err := conn.Controller()
-	if err != nil {
-		t.Fatalf("kafka controller: %v", err)
-	}
-	ctrl, err := kafkago.Dial("tcp", fmt.Sprintf("%s:%d", controller.Host, controller.Port))
-	if err != nil {
-		t.Fatalf("kafka controller dial: %v", err)
-	}
-	defer func() { _ = ctrl.Close() }()
-	err = ctrl.CreateTopics(kafkago.TopicConfig{
-		Topic:             topic,
-		NumPartitions:     1,
-		ReplicationFactor: 1,
-	})
-	if err != nil && !isTopicExists(err) {
-		t.Fatalf("create topic: %v", err)
-	}
-}
-
-func isTopicExists(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "already exists") || strings.Contains(msg, "topic already present")
 }
