@@ -34,6 +34,10 @@ export function ArchitectureLive() {
   const [hotIds, setHotIds] = useState<ArchNodeId[]>([]);
   const [error, setError] = useState<string | null>(null);
   const previousRef = useRef<LiveSnapshot | null>(null);
+  const rowRefs = useRef<Partial<Record<ArchNodeId, HTMLTableRowElement | null>>>(
+    {},
+  );
+  const shouldFocus = useRef(false);
 
   const tick = useCallback(async () => {
     try {
@@ -109,27 +113,37 @@ export function ArchitectureLive() {
   const hot = useMemo(() => new Set(hotIds), [hotIds]);
   const lag = live ? Math.max(0, live.ingested - live.processed) : 0;
   const offline = live ? !live.ok : false;
-  const interpretation = interpret(live, lag, selected);
+  const liveReading = interpret(live, lag, selected);
+  const selectedIndex = ARCH_NODES.findIndex((n) => n.id === selected);
+
+  function selectNode(id: ArchNodeId, focus = false) {
+    if (focus) shouldFocus.current = true;
+    setSelected(id);
+  }
+
+  function moveSelection(delta: number) {
+    const next = Math.min(
+      ARCH_NODES.length - 1,
+      Math.max(0, selectedIndex + delta),
+    );
+    const node = ARCH_NODES[next];
+    if (node) selectNode(node.id, true);
+  }
+
+  useEffect(() => {
+    if (!shouldFocus.current) return;
+    shouldFocus.current = false;
+    rowRefs.current[selected]?.focus();
+  }, [selected]);
 
   return (
-    <main id="main" className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-5 md:px-6">
-      {offline ? (
-        <StatusBanner
-          title="Go service is offline"
-          detail="Counters on this page will not move. Watch the recorded Arena run, or retry."
-          onRetry={() => {
-            void tick();
-          }}
-          retryLabel="Retry service"
-        />
-      ) : null}
-
+    <main id="main" className="mx-auto flex w-full max-w-[1600px] flex-col gap-8 px-4 py-5 md:px-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          <h1 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
             Architecture
           </h1>
-          <p className="mt-2 max-w-xl text-base text-muted-foreground">
+          <p className="mt-2 max-w-xl text-pretty text-base text-muted-foreground">
             Partners send signed events. Credits cannot pay twice.
           </p>
         </div>
@@ -137,6 +151,17 @@ export function ArchitectureLive() {
           <Link href="/">Open Arena</Link>
         </Button>
       </header>
+
+      {offline ? (
+        <StatusBanner
+          title="Go service is offline"
+          detail="Counters on this page will not move. Open the recorded Arena demo, or retry."
+          onRetry={() => {
+            void tick();
+          }}
+          retryLabel="Retry service"
+        />
+      ) : null}
 
       <section aria-labelledby="live-metrics-heading">
         <h2 id="live-metrics-heading" className="sr-only">
@@ -197,16 +222,32 @@ export function ArchitectureLive() {
                   return (
                     <TableRow
                       key={node.id}
+                      ref={(el) => {
+                        rowRefs.current[node.id] = el;
+                      }}
                       data-state={isSel ? "selected" : undefined}
                       className="cursor-pointer"
-                      onClick={() => setSelected(node.id)}
+                      onClick={() => selectNode(node.id)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          setSelected(node.id);
+                          selectNode(node.id);
+                        } else if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          moveSelection(1);
+                        } else if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          moveSelection(-1);
+                        } else if (e.key === "Home") {
+                          e.preventDefault();
+                          selectNode(ARCH_NODES[0].id, true);
+                        } else if (e.key === "End") {
+                          e.preventDefault();
+                          const last = ARCH_NODES[ARCH_NODES.length - 1];
+                          if (last) selectNode(last.id, true);
                         }
                       }}
-                      tabIndex={0}
+                      tabIndex={isSel ? 0 : -1}
                       aria-selected={isSel}
                     >
                       <TableCell className="font-medium">{node.label}</TableCell>
@@ -244,11 +285,26 @@ export function ArchitectureLive() {
               {selectedNode.code}
             </p>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              {interpretation}
+              {liveReading}
             </p>
             {error && live && !live.ok ? (
               <p className="text-sm text-destructive">{error}</p>
             ) : null}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section aria-labelledby="arch-reading">
+        <Card>
+          <CardHeader>
+            <CardTitle id="arch-reading">What the path guarantees</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="max-w-3xl text-sm leading-relaxed text-foreground">
+              HMAC ingest writes the outbox, Kafka feeds the worker, and the
+              ledger credits once per event_id. Tools and shadow read; they do
+              not credit.
+            </p>
           </CardContent>
         </Card>
       </section>
