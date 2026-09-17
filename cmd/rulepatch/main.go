@@ -46,7 +46,12 @@ func run(request string) error {
 		return fmt.Errorf("replay before: %w", err)
 	}
 
-	patch, err := (rulepatch.Mock{}).Propose(ctx, request, rules.Defaults())
+	proposer, err := rulepatch.NewFromEnv()
+	if err != nil {
+		return err
+	}
+
+	patch, err := proposer.Propose(ctx, request, rules.Defaults())
 	if err != nil {
 		return err
 	}
