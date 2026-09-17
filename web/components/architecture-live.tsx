@@ -203,7 +203,7 @@ export function ArchitectureLive() {
             <CardTitle>Event path</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
+            <Table className="min-w-0">
               <TableCaption>
                 Select a row. Hot means recent counter movement.
               </TableCaption>
@@ -211,7 +211,7 @@ export function ArchitectureLive() {
                 <TableRow>
                   <TableHead>Node</TableHead>
                   <TableHead>Job</TableHead>
-                  <TableHead>Code</TableHead>
+                  <TableHead className="hidden sm:table-cell">Code</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -252,7 +252,7 @@ export function ArchitectureLive() {
                     >
                       <TableCell className="font-medium">{node.label}</TableCell>
                       <TableCell>{node.plain}</TableCell>
-                      <TableCell className="font-mono text-xs">
+                      <TableCell className="hidden font-mono text-xs sm:table-cell">
                         {node.code}
                       </TableCell>
                       <TableCell>
