@@ -11,20 +11,33 @@ import (
 )
 
 type Tenant struct {
-	ID             string
-	Name           string
-	APIKey         string
-	HMACSecret     string
-	HMACKeyID      string
-	HMACPrevSecret string
-	HMACPrevKeyID  string
-	HMACPrevUntil  *time.Time
+	ID                string
+	Name              string
+	APIKey            string
+	HMACSecret        string
+	HMACKeyID         string
+	HMACPrevSecret    string
+	HMACPrevKeyID     string
+	HMACPrevUntilUnix int64
+}
+
+func (t Tenant) PreviousLive(now time.Time) bool {
+	return t.HMACPrevSecret != "" && t.HMACPrevUntilUnix > 0 && now.Unix() < t.HMACPrevUntilUnix
+}
+
+func (t Tenant) PreviousUntil() *time.Time {
+	if t.HMACPrevUntilUnix <= 0 {
+		return nil
+	}
+	tm := time.Unix(t.HMACPrevUntilUnix, 0).UTC()
+	return &tm
 }
 
 const tenantHMACCols = `id, name, api_key, hmac_secret, hmac_key_id, hmac_prev_secret, hmac_prev_key_id, hmac_prev_until`
 
 func scanTenant(row pgx.Row) (Tenant, error) {
 	var t Tenant
+	var until *time.Time
 	err := row.Scan(
 		&t.ID,
 		&t.Name,
@@ -33,12 +46,18 @@ func scanTenant(row pgx.Row) (Tenant, error) {
 		&t.HMACKeyID,
 		&t.HMACPrevSecret,
 		&t.HMACPrevKeyID,
-		&t.HMACPrevUntil,
+		&until,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Tenant{}, ErrNotFound
 	}
-	return t, err
+	if err != nil {
+		return Tenant{}, err
+	}
+	if until != nil {
+		t.HMACPrevUntilUnix = until.Unix()
+	}
+	return t, nil
 }
 
 func (s *Store) GetTenant(ctx context.Context, id string) (Tenant, error) {

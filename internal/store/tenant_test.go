@@ -45,7 +45,7 @@ func TestRotateAcmeLeavesNovaSecret(t *testing.T) {
 	if acme.HMACPrevKeyID != "v1" || acme.HMACPrevSecret != "hmac_acme_dev_secret" {
 		t.Fatalf("acme previous key=%s", acme.HMACPrevKeyID)
 	}
-	if acme.HMACPrevUntil == nil || !acme.HMACPrevUntil.After(time.Now().UTC()) {
+	if !acme.PreviousLive(time.Now().UTC()) {
 		t.Fatal("overlap window missing")
 	}
 
