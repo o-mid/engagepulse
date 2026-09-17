@@ -145,8 +145,9 @@ export function ArchitectureLive() {
             <h1 className="display text-balance text-4xl leading-[0.95] md:text-5xl">
               Architecture
             </h1>
-            <p className="mt-3 max-w-xl text-pretty text-base text-[var(--fog-dim)] md:text-lg">
-              Partners send signed events. Credits cannot pay twice.
+            <p className="mt-3 max-w-xl text-base text-[var(--fog-dim)] md:text-lg">
+              <span className="block">Partners send signed events.</span>
+              <span className="block">Credits cannot pay twice.</span>
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
