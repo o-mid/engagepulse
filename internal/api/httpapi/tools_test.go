@@ -191,3 +191,72 @@ func TestToolRejectsUnknownName(t *testing.T) {
 		t.Fatalf("error=%q", body.Error)
 	}
 }
+
+func TestToolIngestRejectsBadHMAC(t *testing.T) {
+	st, srv := newSecurityTestServer(t)
+	defer st.Close()
+	defer srv.Close()
+
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	eventID := "tool-badhmac-" + suffix
+	body := depositBody(t, "acme-casino", "tool-badhmac-"+suffix, eventID)
+
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/v1/tools/ingest", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "ak_acme_dev_001")
+	req.Header.Set("X-Signature", ingest.Sign("wrong-secret", body))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusUnauthorized {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status=%d want 401 body=%s", resp.StatusCode, b)
+	}
+	_, err = st.GetOutbox(context.Background(), "acme-casino", eventID)
+	if err != store.ErrNotFound {
+		t.Fatalf("outbox err=%v want ErrNotFound", err)
+	}
+}
+
+func TestToolCreditAbsent(t *testing.T) {
+	st, srv := newSecurityTestServer(t)
+	defer st.Close()
+	defer srv.Close()
+
+	for _, name := range []string{"credit", "set_vip"} {
+		t.Run(name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodPost, srv.URL+"/v1/tools/"+name, bytes.NewReader([]byte("{}")))
+			if err != nil {
+				t.Fatalf("request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-API-Key", "ak_acme_dev_001")
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("do: %v", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+			if resp.StatusCode != http.StatusNotFound {
+				b, _ := io.ReadAll(resp.Body)
+				t.Fatalf("status=%d want 404 body=%s", resp.StatusCode, b)
+			}
+			var body struct {
+				Error string `json:"error"`
+			}
+			err = json.NewDecoder(resp.Body).Decode(&body)
+			if err != nil {
+				t.Fatalf("decode: %v", err)
+			}
+			if body.Error != "unknown tool" {
+				t.Fatalf("error=%q", body.Error)
+			}
+		})
+	}
+}
