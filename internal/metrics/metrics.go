@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	dto "github.com/prometheus/client_model/go"
 )
 
 var (
@@ -38,6 +39,42 @@ var (
 		Help: "Outbox rows waiting to be published (pending or publishing)",
 	})
 )
+
+type Snapshot struct {
+	EventsIngested  float64 `json:"events_ingested_total"`
+	EventsProcessed float64 `json:"events_processed_total"`
+	LedgerCredits   float64 `json:"ledger_credits_total"`
+	ConsumerRetries float64 `json:"consumer_retries_total"`
+	ConsumerDLQ     float64 `json:"consumer_dlq_total"`
+	OutboxPending   float64 `json:"outbox_pending"`
+}
+
+func JSONSnapshot() Snapshot {
+	return Snapshot{
+		EventsIngested:  counterValue(EventsIngested),
+		EventsProcessed: counterValue(EventsProcessed),
+		LedgerCredits:   counterValue(LedgerCredits),
+		ConsumerRetries: counterValue(ConsumerRetries),
+		ConsumerDLQ:     counterValue(ConsumerDLQ),
+		OutboxPending:   gaugeValue(OutboxPending),
+	}
+}
+
+func counterValue(c prometheus.Counter) float64 {
+	var m dto.Metric
+	if err := c.Write(&m); err != nil {
+		return 0
+	}
+	return m.GetCounter().GetValue()
+}
+
+func gaugeValue(g prometheus.Gauge) float64 {
+	var m dto.Metric
+	if err := g.Write(&m); err != nil {
+		return 0
+	}
+	return m.GetGauge().GetValue()
+}
 
 func Handler() http.Handler {
 	return promhttp.Handler()

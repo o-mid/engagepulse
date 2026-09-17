@@ -127,3 +127,67 @@ func TestToolIngestRejectsCrossTenant(t *testing.T) {
 		t.Fatalf("outbox err=%v want ErrNotFound", err)
 	}
 }
+
+func TestToolGetMetrics(t *testing.T) {
+	st, srv := newSecurityTestServer(t)
+	defer st.Close()
+	defer srv.Close()
+
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/v1/tools/get_metrics", bytes.NewReader([]byte("{}")))
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "ak_acme_dev_001")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status=%d want 200 body=%s", resp.StatusCode, b)
+	}
+	var snap map[string]float64
+	if err := json.NewDecoder(resp.Body).Decode(&snap); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	for _, key := range []string{"events_ingested_total", "events_processed_total", "ledger_credits_total", "outbox_pending"} {
+		if _, ok := snap[key]; !ok {
+			t.Fatalf("missing %s in %v", key, snap)
+		}
+	}
+}
+
+func TestToolRejectsUnknownName(t *testing.T) {
+	st, srv := newSecurityTestServer(t)
+	defer st.Close()
+	defer srv.Close()
+
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/v1/tools/not_a_tool", bytes.NewReader([]byte("{}")))
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "ak_acme_dev_001")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusNotFound {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status=%d want 404 body=%s", resp.StatusCode, b)
+	}
+	var body struct {
+		Error string `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body.Error != "unknown tool" {
+		t.Fatalf("error=%q", body.Error)
+	}
+}

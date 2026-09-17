@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/store"
 )
 
@@ -27,9 +28,16 @@ func (s *Server) handleTool(w http.ResponseWriter, r *http.Request) {
 		s.acceptSignedEvent(w, r, body, tenant.ID)
 	case "get_player":
 		s.handleToolGetPlayer(w, r, tenant, body)
+	case "get_metrics":
+		s.handleToolGetMetrics(w)
 	default:
 		writeError(w, http.StatusNotFound, "unknown tool")
 	}
+}
+
+func (s *Server) handleToolGetMetrics(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(metrics.JSONSnapshot())
 }
 
 func (s *Server) handleToolGetPlayer(w http.ResponseWriter, r *http.Request, tenant store.Tenant, body []byte) {
