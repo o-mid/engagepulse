@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"runtime"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/o-mid/engagepulse/internal/domain"
 	"github.com/o-mid/engagepulse/internal/store"
@@ -39,6 +41,12 @@ func TestReplayPacks(t *testing.T) {
 			dir := packDir(t, brand)
 			events := loadEvents(t, filepath.Join(dir, "events.jsonl"))
 			want := loadExpected(t, filepath.Join(dir, "expected-player.json"))
+			suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+			want.PlayerID = want.PlayerID + "-" + suffix
+			for i := range events {
+				events[i].PlayerID = events[i].PlayerID + "-" + suffix
+				events[i].EventID = events[i].EventID + "-" + suffix
+			}
 
 			apply(t, ctx, w, events)
 			apply(t, ctx, w, events)
