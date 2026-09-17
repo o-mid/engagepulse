@@ -14,8 +14,8 @@ func TestApplyWelcome(t *testing.T) {
 		name    string
 		evt     domain.Event
 		st      store.PlayerState
-		wantTag bool
 		credit  int64
+		wantTag bool
 	}{
 		{
 			name:    "first deposit",
@@ -57,9 +57,9 @@ func TestApplyVIP(t *testing.T) {
 	e := New()
 	tests := []struct {
 		name     string
+		wantTier string
 		score    int64
 		amount   int64
-		wantTier string
 	}{
 		{name: "bronze", score: 0, amount: 100, wantTier: domain.VIPBronze},
 		{name: "silver", score: 900, amount: 200, wantTier: domain.VIPSilver},

@@ -13,8 +13,8 @@ type Scorer interface {
 }
 
 type Decision struct {
-	Flag   bool
 	Reason string
+	Flag   bool
 }
 
 type Mock struct{}

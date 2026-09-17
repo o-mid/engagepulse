@@ -12,12 +12,12 @@ const (
 )
 
 type PlayerSnapshot struct {
+	UpdatedAt     time.Time `json:"updated_at"`
 	TenantID      string    `json:"tenant_id"`
 	PlayerID      string    `json:"player_id"`
-	Score         int64     `json:"score"`
 	VIPTier       string    `json:"vip_tier"`
-	OfferTags     []string  `json:"offer_tags"`
 	IntegrityFlag string    `json:"integrity_flag"`
+	OfferTags     []string  `json:"offer_tags"`
+	Score         int64     `json:"score"`
 	Balance       int64     `json:"balance"`
-	UpdatedAt     time.Time `json:"updated_at"`
 }
