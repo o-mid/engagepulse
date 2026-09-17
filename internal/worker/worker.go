@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -14,6 +15,10 @@ import (
 	"github.com/o-mid/engagepulse/internal/store"
 )
 
+const FailInjectPrefix = "poison-"
+
+var ErrInjectedFailure = errors.New("injected failure")
+
 type Worker struct {
 	store  *store.Store
 	ledger *ledger.Ledger
@@ -22,6 +27,14 @@ type Worker struct {
 
 	// failAfterMark aborts the tx after the processed-event insert (tests).
 	failAfterMark error
+	failInject    bool
+}
+
+func (w *Worker) SetFailInject(enabled bool) {
+	if w == nil {
+		return
+	}
+	w.failInject = enabled
 }
 
 func New(st *store.Store, logger *slog.Logger) *Worker {
@@ -62,6 +75,9 @@ func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
 		}
 		if w.failAfterMark != nil {
 			return w.failAfterMark
+		}
+		if w.failInject && strings.HasPrefix(evt.EventID, FailInjectPrefix) {
+			return ErrInjectedFailure
 		}
 
 		st, err := w.store.GetPlayerStateTx(ctx, tx, evt.TenantID, evt.PlayerID)

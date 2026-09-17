@@ -16,6 +16,7 @@ type Config struct {
 	LogLevel      string
 	KafkaBrokers  []string
 	ShutdownTTL   time.Duration
+	FailInject    bool
 }
 
 func Load() (Config, error) {
@@ -29,6 +30,7 @@ func Load() (Config, error) {
 		KafkaDLQTopic: strings.TrimSpace(env("KAFKA_DLQ_TOPIC", "player.events.dlq")),
 		LogLevel:      env("LOG_LEVEL", "info"),
 		ShutdownTTL:   10 * time.Second,
+		FailInject:    envOn("FAIL_INJECT"),
 	}
 	if cfg.DatabaseURL == "" {
 		cfg.DatabaseURL = "postgres://engagepulse:engagepulse@localhost:5432/engagepulse?sslmode=disable"
@@ -59,6 +61,15 @@ func (c Config) Validate() error {
 		return fmt.Errorf("KAFKA_DLQ_TOPIC is required")
 	}
 	return nil
+}
+
+func envOn(key string) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(key))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }
 
 func env(key, fallback string) string {

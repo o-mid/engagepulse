@@ -38,6 +38,10 @@ var (
 		Name: "engagepulse_outbox_pending",
 		Help: "Outbox rows waiting to be published (pending or publishing)",
 	})
+	FailInject = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "engagepulse_fail_inject",
+		Help: "1 when env-gated worker fail inject is enabled, else 0",
+	})
 )
 
 type Snapshot struct {
@@ -47,6 +51,7 @@ type Snapshot struct {
 	ConsumerRetries float64 `json:"consumer_retries_total"`
 	ConsumerDLQ     float64 `json:"consumer_dlq_total"`
 	OutboxPending   float64 `json:"outbox_pending"`
+	FailInject      float64 `json:"fail_inject"`
 }
 
 func JSONSnapshot() Snapshot {
@@ -57,6 +62,7 @@ func JSONSnapshot() Snapshot {
 		ConsumerRetries: counterValue(ConsumerRetries),
 		ConsumerDLQ:     counterValue(ConsumerDLQ),
 		OutboxPending:   gaugeValue(OutboxPending),
+		FailInject:      gaugeValue(FailInject),
 	}
 }
 
