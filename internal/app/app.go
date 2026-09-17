@@ -73,6 +73,7 @@ func (a *App) Run(ctx context.Context) error {
 	defer func() { _ = consumer.Close() }()
 
 	api := httpapi.New(a.store, a.store, a.logger)
+	api.SetDLQ(kafka.NewInspector(a.cfg.KafkaBrokers, a.cfg.KafkaDLQTopic))
 	srv := &http.Server{
 		Addr:              a.cfg.HTTPAddr,
 		Handler:           api.Handler(),
