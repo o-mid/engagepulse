@@ -25,10 +25,17 @@ type Worker struct {
 }
 
 func New(st *store.Store, logger *slog.Logger) *Worker {
+	return NewWithRules(st, logger, rules.New())
+}
+
+func NewWithRules(st *store.Store, logger *slog.Logger, eng *rules.Engine) *Worker {
+	if eng == nil {
+		eng = rules.New()
+	}
 	return &Worker{
 		store:  st,
 		ledger: ledger.New(st.Pool()),
-		rules:  rules.New(),
+		rules:  eng,
 		logger: logger,
 	}
 }
