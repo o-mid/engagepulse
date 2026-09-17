@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArchitectureDiagram } from "@/components/architecture-diagram";
+import { DlqInspect } from "@/components/dlq-inspect";
 import { Network4Icon } from "@/components/icons/network-4";
 import { StatusBanner } from "@/components/status-banner";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,10 @@ export function ArchitectureLive() {
             }
           />
         </div>
+      </section>
+
+      <section aria-labelledby="dlq-inspect-heading">
+        <DlqInspect />
       </section>
 
       <section aria-labelledby="arch-reading">

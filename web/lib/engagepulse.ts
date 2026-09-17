@@ -1,6 +1,12 @@
 import { apiBase, getTenants, type TenantId } from "./tenants";
 import { signatureHeaders } from "./hmac";
-import type { IngestResult, MetricsMap, PlayerSnapshot } from "./types";
+import type {
+  DeadLetter,
+  IngestResult,
+  MetricsMap,
+  PlayerSnapshot,
+  RedriveResult,
+} from "./types";
 
 type EventPayload = {
   event_id: string;
@@ -60,6 +66,65 @@ export async function ingestEvent(
     player_id: payload.player_id,
     type: payload.type,
     amount: payload.amount,
+  };
+}
+
+export async function listDeadLetters(
+  tenantId: TenantId,
+  n = 20,
+): Promise<DeadLetter[]> {
+  const tenant = getTenants()[tenantId];
+  const res = await fetch(
+    `${apiBase()}/v1/dlq?n=${encodeURIComponent(String(n))}`,
+    {
+      headers: { "X-API-Key": tenant.apiKey },
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`dlq ${res.status}: ${text}`);
+  }
+  const data = (await res.json()) as { items?: DeadLetter[] };
+  return data.items ?? [];
+}
+
+export async function redriveDeadLetter(
+  tenantId: TenantId,
+  eventId: string,
+): Promise<RedriveResult> {
+  const items = await listDeadLetters(tenantId, 100);
+  const letter = items.find((item) => item.event.event_id === eventId);
+  if (!letter) {
+    throw new Error("dead letter not found");
+  }
+  const before = await fetchPlayer(tenantId, letter.event.player_id);
+  const result = await ingestEvent(tenantId, {
+    event_id: letter.event.event_id,
+    player_id: letter.event.player_id,
+    type: letter.event.type,
+    amount: letter.event.amount ?? 0,
+    occurred_at: letter.event.occurred_at || new Date().toISOString(),
+  });
+  let after = before;
+  for (let i = 0; i < 6; i++) {
+    await new Promise((r) => setTimeout(r, 400));
+    after = await fetchPlayer(tenantId, letter.event.player_id);
+    if (
+      after != null &&
+      (before == null || after.balance !== before.balance)
+    ) {
+      break;
+    }
+  }
+  return {
+    status: result.status,
+    event_id: result.event_id,
+    tenant_id: tenantId,
+    player_id: letter.event.player_id,
+    balance_before: before?.balance ?? null,
+    balance_after: after?.balance ?? null,
+    message: "redrive accepted, balance unchanged if already credited.",
   };
 }
 

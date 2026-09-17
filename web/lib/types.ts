@@ -22,6 +22,32 @@ export type IngestResult = {
 
 export type MetricsMap = Record<string, number>;
 
+export type DeadLetterEvent = {
+  event_id: string;
+  tenant_id: string;
+  player_id: string;
+  type: string;
+  amount?: number;
+  occurred_at: string;
+};
+
+export type DeadLetter = {
+  failed_at: string;
+  error: string;
+  attempts: number;
+  event: DeadLetterEvent;
+};
+
+export type RedriveResult = {
+  status: string;
+  event_id: string;
+  tenant_id: string;
+  player_id: string;
+  balance_before: number | null;
+  balance_after: number | null;
+  message: string;
+};
+
 export type DemoResponse = {
   accepted: IngestResult[];
   players: {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/o-mid/engagepulse/internal/domain"
 	"github.com/o-mid/engagepulse/internal/ingest"
+	"github.com/o-mid/engagepulse/internal/kafka"
 	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/store"
 )
@@ -19,22 +20,32 @@ type EventAccepter interface {
 	EnqueueEvent(ctx context.Context, evt domain.Event) error
 }
 
+type DLQLister interface {
+	Recent(ctx context.Context, n int) ([]kafka.DeadLetter, error)
+}
+
 type Server struct {
-	store  *store.Store
 	accept EventAccepter
+	dlq    DLQLister
+	store  *store.Store
 	logger *slog.Logger
 	mux    *http.ServeMux
 }
 
 func New(st *store.Store, accept EventAccepter, logger *slog.Logger) *Server {
-	s := &Server{store: st, accept: accept, logger: logger, mux: http.NewServeMux()}
+	s := &Server{accept: accept, store: st, logger: logger, mux: http.NewServeMux()}
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.Handle("GET /metrics", metrics.Handler())
 	s.mux.HandleFunc("POST /v1/events", s.handleIngest)
 	s.mux.HandleFunc("POST /v1/hmac/rotate", s.requireAPIKey(s.handleRotateHMAC))
 	s.mux.HandleFunc("POST /v1/tools/{name}", s.requireAPIKey(s.handleTool))
 	s.mux.HandleFunc("GET /v1/players/{id}", s.requireAPIKey(s.handleGetPlayer))
+	s.mux.HandleFunc("GET /v1/dlq", s.requireAPIKey(s.handleListDLQ))
 	return s
+}
+
+func (s *Server) SetDLQ(l DLQLister) {
+	s.dlq = l
 }
 
 func (s *Server) Handler() http.Handler {
