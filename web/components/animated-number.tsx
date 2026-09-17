@@ -51,8 +51,8 @@ export function AnimatedNumber({
   return (
     <motion.span
       key={value == null ? "empty" : "num"}
-      initial={{ opacity: 0.4, y: 6, filter: "blur(3px)" }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      initial={reduce ? false : { opacity: 0.55 }}
+      animate={{ opacity: 1 }}
       className={className}
     >
       {display == null ? fallback : display.toLocaleString()}

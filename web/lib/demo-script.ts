@@ -19,13 +19,13 @@ export type StoryEvent = {
 
 export const BEAT_CAPTION: Record<DemoBeat, string> = {
   idle: "Press Ignite to run the happy path.",
-  sign: "Secure sign — HMAC stays in the BFF.",
-  ingest: "Accept — events land in the outbox.",
-  stream: "Process — Kafka delivers to the worker.",
-  acme: "Acme VIP path — score climbs, welcome lands.",
-  nova: "Nova velocity path — burst bets raise a flag.",
+  sign: "Secure sign. HMAC stays in the BFF.",
+  ingest: "Accept. Events land in the outbox.",
+  stream: "Process. Kafka delivers to the worker.",
+  acme: "Acme VIP path. Score climbs, welcome lands.",
+  nova: "Nova velocity path. Burst bets raise a flag.",
   payoff: "Same ledger path. Different outcomes. No double credit.",
-  error: "Backend unreachable — watch the recorded Arena demo, or retry when the API is up.",
+  error: "Backend unreachable. Watch the recorded Arena demo, or retry when the API is up.",
 };
 
 /** Recorded Arena demo when the live API is unreachable. */
@@ -34,11 +34,11 @@ export const DEMO_VIDEO_URL =
 
 export const BEAT_PLAIN: Record<DemoBeat, string> = {
   idle: "Ready",
-  sign: "1 · Secure sign",
-  ingest: "2 · Accept",
-  stream: "3 · Process",
-  acme: "4 · Acme VIP",
-  nova: "5 · Nova flag",
+  sign: "1. Secure sign",
+  ingest: "2. Accept",
+  stream: "3. Process",
+  acme: "4. Acme VIP",
+  nova: "5. Nova flag",
   payoff: "Done",
   error: "Fault",
 };
@@ -106,16 +106,16 @@ export function acmeOutcome(player: PlayerSnapshot | null): string {
   if (!player) return "";
   const welcome = player.offer_tags?.includes("welcome_bonus");
   const tier = player.vip_tier?.toUpperCase() ?? "—";
-  if (welcome) return `${tier} · welcome credited`;
-  return `${tier} · VIP path complete`;
+  if (welcome) return `${tier}, welcome credited`;
+  return `${tier}, VIP path complete`;
 }
 
 export function novaOutcome(player: PlayerSnapshot | null): string {
   if (!player) return "";
   if (player.integrity_flag === "velocity") {
-    return "velocity flagged · integrity watch";
+    return "velocity flagged, integrity watch";
   }
-  return `${player.vip_tier?.toUpperCase() ?? "—"} · processed`;
+  return `${player.vip_tier?.toUpperCase() ?? "—"}, processed`;
 }
 
 export function wait(ms: number, signal?: AbortSignal) {
