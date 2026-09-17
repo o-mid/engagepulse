@@ -4,7 +4,7 @@ import { ArchitectureLive } from "@/components/architecture-live";
 export const metadata: Metadata = {
   title: "Architecture",
   description:
-    "Live architecture view. Signed ingest, outbox, Kafka, rules, ledger.",
+    "Event path diagram: HMAC sign in the BFF, verify in Go, outbox, Kafka, worker tx, ledger.",
 };
 
 export default function ArchitecturePage() {
