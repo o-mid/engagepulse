@@ -30,6 +30,17 @@ type Probe = {
     ledger_wrote: boolean;
     pass: boolean;
   };
+  dlq: {
+    enabled: boolean;
+    skipped: boolean;
+    event_id: string | null;
+    player_id: string | null;
+    ingest_status: string | null;
+    retries_delta: number;
+    dlq_delta: number;
+    balance: number | null;
+    pass: boolean;
+  };
   error?: string;
 };
 
@@ -60,7 +71,8 @@ export function ContractRun() {
         <div className="min-w-0 w-full">
           <CardTitle>Run contract</CardTitle>
           <p className="mt-1 w-full text-pretty break-words text-sm text-muted-foreground">
-            Duplicate event_id, 404 on credit/set_vip, sparse-bets vs velocity.
+            Duplicate event_id, 404 on credit/set_vip, sparse-bets vs velocity,
+            and poison retry to DLQ when inject is on.
           </p>
         </div>
         <Button
@@ -107,6 +119,14 @@ export function ContractRun() {
                 : "disagrees"}
               . Credits {result.shadow.credits_before} → {result.shadow.credits_after}
               {result.shadow.ledger_wrote ? " (wrote)" : " (no ledger write)"}.
+            </li>
+            <li>
+              <Badge variant={result.dlq.pass ? "success-light" : "destructive-light"}>
+                {result.dlq.skipped ? "skip" : result.dlq.pass ? "pass" : "fail"}
+              </Badge>{" "}
+              {result.dlq.skipped
+                ? "Inject off. Poison event not sent."
+                : `Poison ${result.dlq.event_id}: retries Δ ${result.dlq.retries_delta}, DLQ Δ ${result.dlq.dlq_delta}. Balance ${result.dlq.balance ?? "—"}.`}
             </li>
           </ul>
         ) : null}
