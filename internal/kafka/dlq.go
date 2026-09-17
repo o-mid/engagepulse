@@ -43,3 +43,11 @@ func (p *Producer) PublishDLQ(ctx context.Context, evt domain.Event, reason stri
 	}
 	return nil
 }
+
+func ParseDeadLetter(body []byte) (DeadLetter, error) {
+	var dl DeadLetter
+	if err := json.Unmarshal(body, &dl); err != nil {
+		return DeadLetter{}, fmt.Errorf("unmarshal dlq: %w", err)
+	}
+	return dl, nil
+}

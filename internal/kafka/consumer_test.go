@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -75,6 +76,29 @@ func TestProcessEventPermanentFailureGoesToDLQ(t *testing.T) {
 	}
 	if dlq.last.Event.EventID != "e-dlq" || dlq.last.Attempts != 3 {
 		t.Fatalf("dlq payload=%#v", dlq.last)
+	}
+}
+
+func TestParseDeadLetterRoundTrip(t *testing.T) {
+	evt := domain.Event{EventID: "e-parse", TenantID: "acme-casino", PlayerID: "p1"}
+	body, err := json.Marshal(DeadLetter{
+		Event:    evt,
+		Error:    "injected failure",
+		Attempts: MaxAttempts,
+		FailedAt: time.Unix(1_700_000_000, 0).UTC(),
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	got, err := ParseDeadLetter(body)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if got.Event.EventID != "e-parse" || got.Attempts != MaxAttempts {
+		t.Fatalf("parsed=%#v", got)
+	}
+	if got.Error != "injected failure" {
+		t.Fatalf("error=%q", got.Error)
 	}
 }
 

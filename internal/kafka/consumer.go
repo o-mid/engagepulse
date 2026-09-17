@@ -15,8 +15,8 @@ import (
 type EventHandler func(ctx context.Context, evt domain.Event) error
 
 const (
-	defaultMaxAttempts = 3
-	defaultBackoff     = 50 * time.Millisecond
+	MaxAttempts    = 3
+	defaultBackoff = 50 * time.Millisecond
 )
 
 type Consumer struct {
@@ -33,7 +33,7 @@ func NewConsumer(brokers []string, topic, group string, logger *slog.Logger, han
 		logger:      logger,
 		handler:     handler,
 		dlq:         dlq,
-		maxAttempts: defaultMaxAttempts,
+		maxAttempts: MaxAttempts,
 		backoff:     defaultBackoff,
 		reader: kafkago.NewReader(kafkago.ReaderConfig{
 			Brokers:        brokers,
@@ -45,6 +45,19 @@ func NewConsumer(brokers []string, topic, group string, logger *slog.Logger, han
 			StartOffset:    kafkago.FirstOffset,
 		}),
 	}
+}
+
+func (c *Consumer) WithRetry(attempts int, backoff time.Duration) *Consumer {
+	if c == nil {
+		return c
+	}
+	if attempts > 0 {
+		c.maxAttempts = attempts
+	}
+	if backoff > 0 {
+		c.backoff = backoff
+	}
+	return c
 }
 
 func (c *Consumer) Run(ctx context.Context) error {

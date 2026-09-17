@@ -17,6 +17,7 @@ import (
 	"github.com/o-mid/engagepulse/internal/api/httpapi"
 	"github.com/o-mid/engagepulse/internal/config"
 	"github.com/o-mid/engagepulse/internal/kafka"
+	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/outbox"
 	"github.com/o-mid/engagepulse/internal/store"
 	"github.com/o-mid/engagepulse/internal/worker"
@@ -64,6 +65,10 @@ func (a *App) Run(ctx context.Context) error {
 	outboxPub := outbox.NewPublisher(a.store, pub, a.logger)
 
 	w := worker.New(a.store, a.logger)
+	w.SetFailInject(a.cfg.FailInject)
+	if a.cfg.FailInject {
+		metrics.FailInject.Set(1)
+	}
 	consumer := kafka.NewConsumer(a.cfg.KafkaBrokers, a.cfg.KafkaTopic, "engagepulse-workers", a.logger, w.Handle, dlq)
 	defer func() { _ = consumer.Close() }()
 
@@ -110,6 +115,7 @@ func (a *App) Run(ctx context.Context) error {
 		"grpc_addr", a.cfg.GRPCAddr,
 		"kafka_topic", a.cfg.KafkaTopic,
 		"kafka_dlq_topic", a.cfg.KafkaDLQTopic,
+		"fail_inject", a.cfg.FailInject,
 	)
 
 	select {

@@ -19,3 +19,32 @@ func TestValidateRejectsEmptyValues(t *testing.T) {
 		t.Fatal("expected empty kafka topic to fail")
 	}
 }
+
+func TestFailInjectDefaultOff(t *testing.T) {
+	t.Setenv("FAIL_INJECT", "")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.FailInject {
+		t.Fatal("FAIL_INJECT must default off")
+	}
+
+	t.Setenv("FAIL_INJECT", "true")
+	cfg, err = Load()
+	if err != nil {
+		t.Fatalf("load on: %v", err)
+	}
+	if !cfg.FailInject {
+		t.Fatal("FAIL_INJECT=true should enable inject")
+	}
+
+	t.Setenv("FAIL_INJECT", "0")
+	cfg, err = Load()
+	if err != nil {
+		t.Fatalf("load off: %v", err)
+	}
+	if cfg.FailInject {
+		t.Fatal("FAIL_INJECT=0 should stay off")
+	}
+}

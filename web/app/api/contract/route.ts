@@ -62,6 +62,74 @@ export async function POST() {
       sparse.model === true &&
       shadowAfter === shadowBefore;
 
+    const metricsBeforePoison = await parseMetrics();
+    const injectOn = (metricsBeforePoison.engagepulse_fail_inject ?? 0) > 0;
+    let dlqProbe: {
+      enabled: boolean;
+      skipped: boolean;
+      event_id: string | null;
+      player_id: string | null;
+      ingest_status: string | null;
+      retries_delta: number;
+      dlq_delta: number;
+      balance: number | null;
+      pass: boolean;
+    } = {
+      enabled: injectOn,
+      skipped: !injectOn,
+      event_id: null,
+      player_id: null,
+      ingest_status: null,
+      retries_delta: 0,
+      dlq_delta: 0,
+      balance: null,
+      pass: true,
+    };
+
+    if (injectOn) {
+      const poisonPlayerId = `probe-poison-${suffix}`;
+      const poisonEventId = `poison-${suffix}`;
+      const retriesBefore = metricsBeforePoison.engagepulse_consumer_retries_total ?? 0;
+      const dlqBefore = metricsBeforePoison.engagepulse_consumer_dlq_total ?? 0;
+      const poisonIngest = await ingestEvent("acme-casino", {
+        event_id: poisonEventId,
+        player_id: poisonPlayerId,
+        type: "deposit",
+        amount: 50,
+        occurred_at: new Date().toISOString(),
+      });
+
+      let poisonPlayer = await fetchPlayer("acme-casino", poisonPlayerId);
+      let retriesAfter = retriesBefore;
+      let dlqAfter = dlqBefore;
+      for (let i = 0; i < 8; i++) {
+        await sleep(800);
+        const m = await parseMetrics();
+        retriesAfter = m.engagepulse_consumer_retries_total ?? retriesAfter;
+        dlqAfter = m.engagepulse_consumer_dlq_total ?? dlqAfter;
+        poisonPlayer = await fetchPlayer("acme-casino", poisonPlayerId);
+        if (dlqAfter > dlqBefore) break;
+      }
+      const retriesDelta = retriesAfter - retriesBefore;
+      const dlqDelta = dlqAfter - dlqBefore;
+      const poisonBalance = poisonPlayer?.balance ?? 0;
+      dlqProbe = {
+        enabled: true,
+        skipped: false,
+        event_id: poisonEventId,
+        player_id: poisonPlayerId,
+        ingest_status: poisonIngest.status,
+        retries_delta: retriesDelta,
+        dlq_delta: dlqDelta,
+        balance: poisonPlayer?.balance ?? null,
+        pass:
+          poisonIngest.status === "accepted" &&
+          retriesDelta >= 2 &&
+          dlqDelta >= 1 &&
+          poisonBalance === 0,
+      };
+    }
+
     return NextResponse.json({
       llm: "The LLM is not on the credit path.",
       hmac: "HMAC is signed in the BFF and verified in Go.",
@@ -86,6 +154,7 @@ export async function POST() {
         ledger_wrote: shadowAfter !== shadowBefore,
         pass: shadowPass,
       },
+      dlq: dlqProbe,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "contract probe failed";

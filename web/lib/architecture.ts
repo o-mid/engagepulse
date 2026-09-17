@@ -118,6 +118,7 @@ export type LiveSnapshot = {
   welcome: number;
   vip: number;
   velocity: number;
+  retries: number;
   dlq: number;
 };
 
@@ -145,7 +146,7 @@ export function liveReading(
       lag > 0
         ? `${lag} accepted event(s) not yet processed.`
         : "Processed caught up with ingested.",
-    worker: `Processed ${live.processed.toLocaleString()} events. Worker tx is mark + state + credit.`,
+    worker: `Processed ${live.processed.toLocaleString()} events. Retries ${live.retries.toLocaleString()}. Worker tx is mark + state + credit.`,
     rules: `Hits: welcome ${live.welcome}, vip ${live.vip}, velocity ${live.velocity}.`,
     ledger: `Successful credits ${live.credits.toLocaleString()} (unique event ids).`,
     read: "GET /v1/players/{id}. Tools wrap the same reads. They do not credit.",

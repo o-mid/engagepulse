@@ -39,6 +39,7 @@ export function useLiveArchitecture(intervalMs = 1500) {
         welcome: metric(metrics, "rule_welcome_offer"),
         vip: metric(metrics, "rule_vip_score"),
         velocity: metric(metrics, "rule_integrity_velocity"),
+        retries: metric(metrics, "engagepulse_consumer_retries_total"),
         dlq: metric(metrics, "engagepulse_consumer_dlq_total"),
       };
 
@@ -58,6 +59,10 @@ export function useLiveArchitecture(intervalMs = 1500) {
           nextHot.add("read");
         }
         if (next.credits > previous.credits) nextHot.add("ledger");
+        if (next.retries > previous.retries) {
+          nextHot.add("kafka");
+          nextHot.add("worker");
+        }
         if (next.dlq > previous.dlq) nextHot.add("dlq");
       }
       if (next.outboxPending > 0) nextHot.add("outbox");

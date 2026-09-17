@@ -18,6 +18,7 @@ import (
 	"github.com/o-mid/engagepulse/internal/domain"
 	"github.com/o-mid/engagepulse/internal/ingest"
 	"github.com/o-mid/engagepulse/internal/kafka"
+	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/outbox"
 	"github.com/o-mid/engagepulse/internal/store"
 	"github.com/o-mid/engagepulse/internal/worker"
@@ -167,6 +168,176 @@ func TestIngestThroughSnapshot(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("missing welcome_bonus; tags=%v", snap.OfferTags)
+	}
+}
+
+// Proves: signed poison event retries 3×, lands on Kafka DLQ, balance unchanged.
+func TestPoisonSignedEventRetriesThenKafkaDLQ(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	brokers := os.Getenv("KAFKA_BROKERS")
+	if dsn == "" || brokers == "" {
+		t.Skip("DATABASE_URL and KAFKA_BROKERS required")
+	}
+
+	ctx := context.Background()
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	topic := "player.events.poison-" + suffix
+	dlqTopic := "player.events.dlq.poison-" + suffix
+	ensureKafkaTopic(t, brokers, topic)
+	ensureKafkaTopic(t, brokers, dlqTopic)
+
+	st, err := store.Open(ctx, dsn)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer st.Close()
+	if err = st.Migrate(ctx); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	api := httpapi.New(st, st, logger)
+	srv := httptest.NewServer(api.Handler())
+	defer srv.Close()
+
+	tenantID := "acme-casino"
+	playerID := "poison-player-" + suffix
+	eventID := worker.FailInjectPrefix + suffix
+	tenant, err := st.GetTenant(ctx, tenantID)
+	if err != nil {
+		t.Fatalf("tenant: %v", err)
+	}
+
+	evt := domain.Event{
+		EventID:    eventID,
+		TenantID:   tenantID,
+		PlayerID:   playerID,
+		Type:       domain.EventDeposit,
+		Amount:     50,
+		OccurredAt: time.Now().UTC(),
+	}
+	body, err := json.Marshal(evt)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/v1/events", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Signature", ingest.Sign(tenant.HMACSecret, body))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("ingest: %v", err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("ingest status=%d", resp.StatusCode)
+	}
+
+	pub := kafka.NewProducer([]string{brokers}, topic)
+	defer func() { _ = pub.Close() }()
+	dlqPub := kafka.NewProducer([]string{brokers}, dlqTopic)
+	defer func() { _ = dlqPub.Close() }()
+
+	w := worker.New(st, logger)
+	w.SetFailInject(true)
+	consumer := kafka.NewConsumer(
+		[]string{brokers},
+		topic,
+		"engagepulse-poison-"+suffix,
+		logger,
+		w.Handle,
+		dlqPub,
+	).WithRetry(kafka.MaxAttempts, time.Millisecond)
+	defer func() { _ = consumer.Close() }()
+
+	retriesBefore := metrics.JSONSnapshot().ConsumerRetries
+	dlqBefore := metrics.JSONSnapshot().ConsumerDLQ
+
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	errCh := make(chan error, 1)
+	go func() { errCh <- consumer.Run(runCtx) }()
+
+	op := outbox.NewPublisher(st, pub, logger)
+	deadline := time.Now().Add(20 * time.Second)
+	var row store.OutboxRow
+	for {
+		if err = op.FlushOnce(ctx); err != nil {
+			t.Fatalf("flush: %v", err)
+		}
+		row, err = st.GetOutbox(ctx, tenantID, eventID)
+		if err != nil {
+			t.Fatalf("outbox: %v", err)
+		}
+		if row.Status == store.OutboxPublished {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("outbox not published; status=%s err=%q", row.Status, row.LastError)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	dlqReader := kafkago.NewReader(kafkago.ReaderConfig{
+		Brokers:     []string{brokers},
+		Topic:       dlqTopic,
+		Partition:   0,
+		MinBytes:    1,
+		MaxBytes:    10e6,
+		StartOffset: kafkago.FirstOffset,
+	})
+	defer func() { _ = dlqReader.Close() }()
+
+	readCtx, readCancel := context.WithTimeout(ctx, 20*time.Second)
+	defer readCancel()
+	var letter kafka.DeadLetter
+	for {
+		var msg kafkago.Message
+		msg, err = dlqReader.ReadMessage(readCtx)
+		if err != nil {
+			t.Fatalf("read dlq: %v", err)
+		}
+		letter, err = kafka.ParseDeadLetter(msg.Value)
+		if err != nil {
+			t.Fatalf("parse dlq: %v", err)
+		}
+		if letter.Event.EventID == eventID {
+			break
+		}
+	}
+	cancel()
+
+	if letter.Attempts != kafka.MaxAttempts {
+		t.Fatalf("dlq attempts=%d want %d", letter.Attempts, kafka.MaxAttempts)
+	}
+	if !strings.Contains(letter.Error, worker.ErrInjectedFailure.Error()) {
+		t.Fatalf("dlq error=%q", letter.Error)
+	}
+
+	snap := metrics.JSONSnapshot()
+	if snap.ConsumerRetries-retriesBefore < 2 {
+		t.Fatalf("retries delta=%v want >=2", snap.ConsumerRetries-retriesBefore)
+	}
+	if snap.ConsumerDLQ-dlqBefore < 1 {
+		t.Fatalf("dlq delta=%v want >=1", snap.ConsumerDLQ-dlqBefore)
+	}
+
+	processed, err := st.IsProcessed(ctx, tenantID, eventID)
+	if err != nil {
+		t.Fatalf("is processed: %v", err)
+	}
+	if processed {
+		t.Fatal("poison event must not be marked processed")
+	}
+	var playerSnap domain.PlayerSnapshot
+	playerSnap, err = st.GetPlayerSnapshot(ctx, tenantID, playerID)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if playerSnap.Balance != 0 {
+		t.Fatalf("poison event credited balance=%d want 0", playerSnap.Balance)
 	}
 }
 
