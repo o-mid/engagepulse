@@ -32,7 +32,8 @@ func run() error {
 
 	if *migrateOnly {
 		ctx := context.Background()
-		st, err := store.Open(ctx, cfg.DatabaseURL)
+		var st *store.Store
+		st, err = store.Open(ctx, cfg.DatabaseURL)
 		if err != nil {
 			return err
 		}

@@ -20,7 +20,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 	defer conn.Release()
 
 	// Session-scoped lock: concurrent Migrate callers wait instead of racing DDL.
-	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock($1)`, migrateLockKey); err != nil {
+	if _, err = conn.Exec(ctx, `SELECT pg_advisory_lock($1)`, migrateLockKey); err != nil {
 		return fmt.Errorf("migrate lock: %w", err)
 	}
 	defer func() {
@@ -56,29 +56,30 @@ func (s *Store) Migrate(ctx context.Context) error {
 
 	for _, name := range names {
 		var exists bool
-		if err := conn.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE filename=$1)`, name).Scan(&exists); err != nil {
+		if err = conn.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE filename=$1)`, name).Scan(&exists); err != nil {
 			return err
 		}
 		if exists {
 			continue
 		}
-		body, err := migrations.FS.ReadFile(name)
+		var body []byte
+		body, err = migrations.FS.ReadFile(name)
 		if err != nil {
 			return err
 		}
-		tx, err := conn.Begin(ctx)
-		if err != nil {
-			return err
+		tx, beginErr := conn.Begin(ctx)
+		if beginErr != nil {
+			return beginErr
 		}
-		if _, err := tx.Exec(ctx, string(body)); err != nil {
+		if _, err = tx.Exec(ctx, string(body)); err != nil {
 			_ = tx.Rollback(ctx)
 			return fmt.Errorf("apply %s: %w", name, err)
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO schema_migrations(filename) VALUES ($1)`, name); err != nil {
+		if _, err = tx.Exec(ctx, `INSERT INTO schema_migrations(filename) VALUES ($1)`, name); err != nil {
 			_ = tx.Rollback(ctx)
 			return err
 		}
-		if err := tx.Commit(ctx); err != nil {
+		if err = tx.Commit(ctx); err != nil {
 			return err
 		}
 	}

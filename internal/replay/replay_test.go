@@ -24,7 +24,7 @@ func TestReplayPacks(t *testing.T) {
 		t.Fatalf("open store: %v", err)
 	}
 	defer st.Close()
-	if err := st.Migrate(ctx); err != nil {
+	if err = st.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 

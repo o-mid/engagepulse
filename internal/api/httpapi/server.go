@@ -85,7 +85,7 @@ func (s *Server) acceptSignedEvent(w http.ResponseWriter, r *http.Request, body 
 		return
 	}
 	// Verify against the raw body bytes, not a re-marshalled JSON form.
-	if err := ingest.Verify(tenant.HMACSecret, sig, body); err != nil {
+	if err = ingest.Verify(tenant.HMACSecret, sig, body); err != nil {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}

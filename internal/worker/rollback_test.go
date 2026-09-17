@@ -25,7 +25,7 @@ func TestHandleRollsBackWhenProcessingFailsAfterMark(t *testing.T) {
 		t.Fatalf("open: %v", err)
 	}
 	defer st.Close()
-	if err := st.Migrate(ctx); err != nil {
+	if err = st.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 
@@ -45,7 +45,7 @@ func TestHandleRollsBackWhenProcessingFailsAfterMark(t *testing.T) {
 		Amount:     25,
 		OccurredAt: time.Now().UTC(),
 	}
-	if err := w.Handle(ctx, evt); err == nil {
+	if err = w.Handle(ctx, evt); err == nil {
 		t.Fatal("handle: want error")
 	}
 
@@ -64,7 +64,7 @@ func TestHandleRollsBackWhenProcessingFailsAfterMark(t *testing.T) {
 
 	// Retry without the inject should succeed and credit once.
 	w.failAfterMark = nil
-	if err := w.Handle(ctx, evt); err != nil {
+	if err = w.Handle(ctx, evt); err != nil {
 		t.Fatalf("retry handle: %v", err)
 	}
 	snap, err := st.GetPlayerSnapshot(ctx, tenantID, playerID)

@@ -67,7 +67,7 @@ func TestShadowDoesNotCreditOrChangeBalance(t *testing.T) {
 		t.Fatalf("open: %v", err)
 	}
 	defer st.Close()
-	if err := st.Migrate(ctx); err != nil {
+	if err = st.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 
@@ -81,7 +81,7 @@ func TestShadowDoesNotCreditOrChangeBalance(t *testing.T) {
 	shadowPlayer := "shadow-readonly-" + suffix
 	workerPlayer := "shadow-worker-" + suffix
 
-	if err := st.EnsurePlayer(ctx, tenantID, shadowPlayer); err != nil {
+	if err = st.EnsurePlayer(ctx, tenantID, shadowPlayer); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 
@@ -124,7 +124,7 @@ func TestShadowDoesNotCreditOrChangeBalance(t *testing.T) {
 
 	w := worker.New(st, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	for _, evt := range retarget(src, workerPlayer, suffix+"-w") {
-		if err := w.Handle(ctx, evt); err != nil {
+		if err = w.Handle(ctx, evt); err != nil {
 			t.Fatalf("handle %s: %v", evt.EventID, err)
 		}
 	}

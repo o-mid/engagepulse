@@ -36,7 +36,7 @@ func run(request string) error {
 		return err
 	}
 	defer st.Close()
-	if err := st.Migrate(ctx); err != nil {
+	if err = st.Migrate(ctx); err != nil {
 		return err
 	}
 

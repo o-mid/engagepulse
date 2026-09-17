@@ -24,13 +24,13 @@ func TestPermanentFailureLandsInDLQWithoutLedgerCredit(t *testing.T) {
 		t.Fatalf("open: %v", err)
 	}
 	defer st.Close()
-	if err := st.Migrate(ctx); err != nil {
+	if err = st.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 
 	tenantID := "acme-casino"
 	playerID := "dlq-no-credit"
-	if err := st.EnsurePlayer(ctx, tenantID, playerID); err != nil {
+	if err = st.EnsurePlayer(ctx, tenantID, playerID); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 	before, err := st.GetBalance(ctx, tenantID, playerID)
@@ -56,7 +56,7 @@ func TestPermanentFailureLandsInDLQWithoutLedgerCredit(t *testing.T) {
 		Amount:     50,
 		OccurredAt: time.Now().UTC(),
 	}
-	if err := c.processEvent(ctx, evt); err != nil {
+	if err = c.processEvent(ctx, evt); err != nil {
 		t.Fatalf("process: %v", err)
 	}
 	if dlq.calls != 1 {
