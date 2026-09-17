@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -263,11 +262,12 @@ func TestPoisonSignedEventRetriesThenKafkaDLQ(t *testing.T) {
 
 	op := outbox.NewPublisher(st, pub, logger)
 	deadline := time.Now().Add(20 * time.Second)
+	var row store.OutboxRow
 	for {
 		if err = op.FlushOnce(ctx); err != nil {
 			t.Fatalf("flush: %v", err)
 		}
-		row, err := st.GetOutbox(ctx, tenantID, eventID)
+		row, err = st.GetOutbox(ctx, tenantID, eventID)
 		if err != nil {
 			t.Fatalf("outbox: %v", err)
 		}
@@ -294,7 +294,8 @@ func TestPoisonSignedEventRetriesThenKafkaDLQ(t *testing.T) {
 	defer readCancel()
 	var letter kafka.DeadLetter
 	for {
-		msg, err := dlqReader.ReadMessage(readCtx)
+		var msg kafkago.Message
+		msg, err = dlqReader.ReadMessage(readCtx)
 		if err != nil {
 			t.Fatalf("read dlq: %v", err)
 		}
@@ -330,9 +331,13 @@ func TestPoisonSignedEventRetriesThenKafkaDLQ(t *testing.T) {
 	if processed {
 		t.Fatal("poison event must not be marked processed")
 	}
-	_, err = st.GetPlayerSnapshot(ctx, tenantID, playerID)
-	if !errors.Is(err, store.ErrNotFound) {
-		t.Fatalf("snapshot err=%v want ErrNotFound (no credit)", err)
+	var playerSnap domain.PlayerSnapshot
+	playerSnap, err = st.GetPlayerSnapshot(ctx, tenantID, playerID)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if playerSnap.Balance != 0 {
+		t.Fatalf("poison event credited balance=%d want 0", playerSnap.Balance)
 	}
 }
 

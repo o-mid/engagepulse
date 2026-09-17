@@ -68,7 +68,8 @@ func TestFailInjectLeavesDefaultIngestAlone(t *testing.T) {
 
 	off := New(st, slog.Default())
 	poisonID := FailInjectPrefix + "off-" + suffix
-	if err := off.Handle(ctx, depositEvent(tenantID, "inject-off-"+suffix, poisonID)); err != nil {
+	err = off.Handle(ctx, depositEvent(tenantID, "inject-off-"+suffix, poisonID))
+	if err != nil {
 		t.Fatalf("inject-off handle: %v", err)
 	}
 	snap, err = st.GetPlayerSnapshot(ctx, tenantID, "inject-off-"+suffix)
