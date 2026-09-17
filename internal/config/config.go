@@ -11,10 +11,10 @@ type Config struct {
 	HTTPAddr      string
 	GRPCAddr      string
 	DatabaseURL   string
-	KafkaBrokers  []string
 	KafkaTopic    string
 	KafkaDLQTopic string
 	LogLevel      string
+	KafkaBrokers  []string
 	ShutdownTTL   time.Duration
 }
 

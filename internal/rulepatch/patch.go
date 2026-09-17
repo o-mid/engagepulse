@@ -8,8 +8,8 @@ import (
 )
 
 type Patch struct {
-	Thresholds rules.Thresholds
 	Diff       string
+	Thresholds rules.Thresholds
 }
 
 func Diff(from, to rules.Thresholds) string {

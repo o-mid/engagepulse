@@ -13,8 +13,8 @@ import (
 )
 
 type memDLQ struct {
-	calls    int
 	last     DeadLetter
+	calls    int
 	failNext bool
 }
 

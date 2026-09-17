@@ -18,15 +18,15 @@ const (
 )
 
 type OutboxRow struct {
-	ID        int64
+	CreatedAt time.Time
 	TenantID  string
 	PlayerID  string
 	EventID   string
-	Payload   []byte
 	Status    string
-	Attempts  int
 	LastError string
-	CreatedAt time.Time
+	Payload   []byte
+	ID        int64
+	Attempts  int
 }
 
 // EnqueueEvent saves the event in the DB (outbox) before we reply 202.
@@ -43,7 +43,7 @@ func (s *Store) EnqueueEvent(ctx context.Context, evt domain.Event) error {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if err := EnsurePlayerTx(ctx, tx, evt.TenantID, evt.PlayerID); err != nil {
+	if err = EnsurePlayerTx(ctx, tx, evt.TenantID, evt.PlayerID); err != nil {
 		return err
 	}
 
@@ -127,7 +127,7 @@ func (s *Store) ClaimPendingOutbox(ctx context.Context, limit int) ([]OutboxRow,
 	var out []OutboxRow
 	for rows.Next() {
 		var r OutboxRow
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&r.ID, &r.TenantID, &r.PlayerID, &r.EventID, &r.Payload,
 			&r.Status, &r.Attempts, &r.LastError, &r.CreatedAt,
 		); err != nil {
@@ -135,10 +135,10 @@ func (s *Store) ClaimPendingOutbox(ctx context.Context, limit int) ([]OutboxRow,
 		}
 		out = append(out, r)
 	}
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	if err := tx.Commit(ctx); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 	return out, nil

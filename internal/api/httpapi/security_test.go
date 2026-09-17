@@ -36,7 +36,7 @@ func TestIngestRejectsBadHMAC(t *testing.T) {
 	if err != nil {
 		t.Fatalf("do: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("status=%d want 401", resp.StatusCode)
 	}
@@ -59,7 +59,7 @@ func TestIngestRejectsUnknownTenant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("do: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusUnauthorized {
 		b, _ := io.ReadAll(resp.Body)
 		t.Fatalf("status=%d want 401 body=%s", resp.StatusCode, b)
@@ -88,7 +88,7 @@ func TestGetPlayerHidesCrossTenant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("do: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusNotFound {
 		b, _ := io.ReadAll(resp.Body)
 		t.Fatalf("status=%d want 404 body=%s", resp.StatusCode, b)
@@ -106,7 +106,7 @@ func newSecurityTestServer(t *testing.T) (*store.Store, *httptest.Server) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	if err := st.Migrate(ctx); err != nil {
+	if err = st.Migrate(ctx); err != nil {
 		st.Close()
 		t.Fatalf("migrate: %v", err)
 	}

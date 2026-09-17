@@ -10,13 +10,13 @@ import (
 )
 
 type PlayerState struct {
+	UpdatedAt     time.Time
 	TenantID      string
 	PlayerID      string
-	Score         int64
 	VIPTier       string
-	OfferTags     []string
 	IntegrityFlag string
-	UpdatedAt     time.Time
+	OfferTags     []string
+	Score         int64
 }
 
 func (s *Store) GetPlayerState(ctx context.Context, tenantID, playerID string) (PlayerState, error) {

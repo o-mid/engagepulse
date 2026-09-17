@@ -41,7 +41,7 @@ func TestIngestThroughSnapshot(t *testing.T) {
 		t.Fatalf("open store: %v", err)
 	}
 	defer st.Close()
-	if err := st.Migrate(ctx); err != nil {
+	if err = st.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 
@@ -102,7 +102,7 @@ func TestIngestThroughSnapshot(t *testing.T) {
 
 	deadline := time.Now().Add(20 * time.Second)
 	for {
-		if err := op.FlushOnce(ctx); err != nil {
+		if err = op.FlushOnce(ctx); err != nil {
 			t.Fatalf("flush: %v", err)
 		}
 		row, err = st.GetOutbox(ctx, tenantID, eventID)
@@ -132,11 +132,12 @@ func TestIngestThroughSnapshot(t *testing.T) {
 	readCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	for {
-		msg, err := reader.FetchMessage(readCtx)
+		var msg kafkago.Message
+		msg, err = reader.FetchMessage(readCtx)
 		if err != nil {
 			t.Fatalf("fetch kafka: %v", err)
 		}
-		if err := json.Unmarshal(msg.Value, &got); err != nil {
+		if err = json.Unmarshal(msg.Value, &got); err != nil {
 			t.Fatalf("unmarshal: %v", err)
 		}
 		_ = reader.CommitMessages(readCtx, msg)
@@ -146,7 +147,7 @@ func TestIngestThroughSnapshot(t *testing.T) {
 	}
 
 	w := worker.New(st, logger)
-	if err := w.Handle(ctx, got); err != nil {
+	if err = w.Handle(ctx, got); err != nil {
 		t.Fatalf("worker: %v", err)
 	}
 

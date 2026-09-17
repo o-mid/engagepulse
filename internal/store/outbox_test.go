@@ -74,8 +74,8 @@ func TestEnqueueDuplicateIsIdempotent(t *testing.T) {
 }
 
 type memKafka struct {
-	events []domain.Event
 	err    error
+	events []domain.Event
 }
 
 func (m *memKafka) Publish(_ context.Context, evt domain.Event) error {
@@ -138,7 +138,7 @@ func openTestStore(t *testing.T) *store.Store {
 		t.Fatalf("open: %v", err)
 	}
 	t.Cleanup(st.Close)
-	if err := st.Migrate(ctx); err != nil {
+	if err = st.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	return st

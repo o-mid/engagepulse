@@ -25,13 +25,13 @@ func TestIngestToStateWelcomeOffer(t *testing.T) {
 		t.Fatalf("open: %v", err)
 	}
 	defer st.Close()
-	if err := st.Migrate(ctx); err != nil {
+	if err = st.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 
 	tenantID := "nova-sports"
 	playerID := "integ-player-1"
-	if err := st.EnsurePlayer(ctx, tenantID, playerID); err != nil {
+	if err = st.EnsurePlayer(ctx, tenantID, playerID); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 
@@ -44,10 +44,10 @@ func TestIngestToStateWelcomeOffer(t *testing.T) {
 		Amount:     25,
 		OccurredAt: time.Now().UTC(),
 	}
-	if err := w.Handle(ctx, evt); err != nil {
+	if err = w.Handle(ctx, evt); err != nil {
 		t.Fatalf("handle: %v", err)
 	}
-	if err := w.Handle(ctx, evt); err != nil {
+	if err = w.Handle(ctx, evt); err != nil {
 		t.Fatalf("replay handle: %v", err)
 	}
 

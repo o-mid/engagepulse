@@ -12,10 +12,10 @@ import (
 
 // DeadLetter is what ops would inspect later: original event + why processing gave up.
 type DeadLetter struct {
-	Event    domain.Event `json:"event"`
-	Error    string       `json:"error"`
-	Attempts int          `json:"attempts"`
 	FailedAt time.Time    `json:"failed_at"`
+	Error    string       `json:"error"`
+	Event    domain.Event `json:"event"`
+	Attempts int          `json:"attempts"`
 }
 
 type DLQPublisher interface {

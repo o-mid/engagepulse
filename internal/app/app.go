@@ -23,9 +23,9 @@ import (
 )
 
 type App struct {
-	cfg    config.Config
 	logger *slog.Logger
 	store  *store.Store
+	cfg    config.Config
 }
 
 func New(cfg config.Config) *App {
@@ -50,7 +50,7 @@ func (a *App) Run(ctx context.Context) error {
 	a.store = st
 	defer a.store.Close()
 
-	if err := a.store.Migrate(ctx); err != nil {
+	if err = a.store.Migrate(ctx); err != nil {
 		return fmt.Errorf("migrate: %w", err)
 	}
 

@@ -13,9 +13,9 @@ import (
 
 type BrandResult struct {
 	Brand string
-	Pass  bool
 	Got   domain.PlayerSnapshot
 	Want  domain.PlayerSnapshot
+	Pass  bool
 }
 
 type Report struct {
@@ -34,10 +34,10 @@ func (r Report) AllPass() bool {
 type Contract struct {
 	TenantID      string
 	PlayerID      string
-	Score         int64
 	VIPTier       string
-	OfferTags     []string
 	IntegrityFlag string
+	OfferTags     []string
+	Score         int64
 	Balance       int64
 }
 
@@ -76,10 +76,10 @@ func Run(ctx context.Context, st *store.Store, w *worker.Worker) (Report, error)
 			events[i].PlayerID = events[i].PlayerID + "-" + suffix
 			events[i].EventID = events[i].EventID + "-" + suffix
 		}
-		if err := apply(ctx, w, events); err != nil {
+		if err = apply(ctx, w, events); err != nil {
 			return report, err
 		}
-		if err := apply(ctx, w, events); err != nil {
+		if err = apply(ctx, w, events); err != nil {
 			return report, err
 		}
 		got, err := st.GetPlayerSnapshot(ctx, want.TenantID, want.PlayerID)

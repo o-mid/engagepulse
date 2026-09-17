@@ -41,8 +41,8 @@ type scoreJSON struct {
 
 type burstEvent struct {
 	Type       string `json:"type"`
-	Amount     int64  `json:"amount,omitempty"`
 	OccurredAt string `json:"occurred_at"`
+	Amount     int64  `json:"amount,omitempty"`
 }
 
 func (o OpenAI) Score(ctx context.Context, events []domain.Event) (Decision, error) {

@@ -6,10 +6,10 @@ import (
 )
 
 type Result struct {
-	State        store.PlayerState
-	CreditAmount int64
 	CreditReason string
 	RuleHits     []string
+	State        store.PlayerState
+	CreditAmount int64
 }
 
 type Engine struct {

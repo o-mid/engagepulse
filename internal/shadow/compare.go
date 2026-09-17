@@ -13,10 +13,10 @@ var Packs = []string{"acme-casino", "nova-sports", "sparse-bets"}
 
 type Row struct {
 	Pack      string
+	Reason    string
 	RuleFlag  bool
 	ModelFlag bool
 	Agree     bool
-	Reason    string
 }
 
 type Board struct {
