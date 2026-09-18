@@ -29,6 +29,13 @@ func (s *Store) Close() {
 	}
 }
 
+func (s *Store) Ping(ctx context.Context) error {
+	if s == nil || s.pool == nil {
+		return fmt.Errorf("store closed")
+	}
+	return s.pool.Ping(ctx)
+}
+
 func (s *Store) Pool() *pgxpool.Pool {
 	return s.pool
 }

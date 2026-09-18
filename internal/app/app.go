@@ -74,6 +74,9 @@ func (a *App) Run(ctx context.Context) error {
 
 	api := httpapi.New(a.store, a.store, a.logger)
 	api.SetDLQ(kafka.NewInspector(a.cfg.KafkaBrokers, a.cfg.KafkaDLQTopic))
+	api.SetReady(func(ctx context.Context) error {
+		return kafka.Ping(ctx, a.cfg.KafkaBrokers)
+	})
 	srv := &http.Server{
 		Addr:              a.cfg.HTTPAddr,
 		Handler:           api.Handler(),

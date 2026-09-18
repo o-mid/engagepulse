@@ -136,7 +136,7 @@ export function liveReading(
     partner: `Ingested lifetime ${live.ingested.toLocaleString()}. Climb this by running the live demo.`,
     hmac: "Signed in the BFF. Secret stays in Node, not in the browser.",
     ingest: live.ok
-      ? `Go verified the signature. Last /healthz ${live.latencyMs}ms.`
+      ? `Go verified the signature. Last /readyz ${live.latencyMs}ms.`
       : "API probe failed.",
     outbox:
       live.outboxPending > 0

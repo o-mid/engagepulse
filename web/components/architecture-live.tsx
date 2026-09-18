@@ -92,7 +92,7 @@ export function ArchitectureLive() {
           <StatCard
             label="API"
             value={live ? (live.ok ? "online" : "offline") : "…"}
-            description={live ? `${live.latencyMs} ms, /healthz` : "probing"}
+            description={live ? `${live.latencyMs} ms, /readyz` : "probing"}
             icon={<Network4Icon className="size-4" />}
           />
           <StatCard

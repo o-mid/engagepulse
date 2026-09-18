@@ -52,3 +52,25 @@ func (p *Producer) Close() error {
 	}
 	return p.writer.Close()
 }
+
+// Ping dials a broker for /readyz.
+func Ping(ctx context.Context, brokers []string) error {
+	if len(brokers) == 0 {
+		return fmt.Errorf("no kafka brokers")
+	}
+	d := &kafkago.Dialer{Timeout: 2 * time.Second}
+	var last error
+	for _, broker := range brokers {
+		conn, err := d.DialContext(ctx, "tcp", broker)
+		if err != nil {
+			last = err
+			continue
+		}
+		_ = conn.Close()
+		return nil
+	}
+	if last == nil {
+		return fmt.Errorf("kafka dial failed")
+	}
+	return fmt.Errorf("kafka dial: %w", last)
+}
