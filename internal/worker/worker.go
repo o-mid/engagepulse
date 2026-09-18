@@ -13,6 +13,7 @@ import (
 	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/rules"
 	"github.com/o-mid/engagepulse/internal/store"
+	"github.com/o-mid/engagepulse/internal/tracing"
 )
 
 const FailInjectPrefix = "poison-"
@@ -54,6 +55,10 @@ func NewWithRules(st *store.Store, logger *slog.Logger, eng *rules.Engine) *Work
 }
 
 func (w *Worker) Handle(ctx context.Context, evt domain.Event) error {
+	ctx = tracing.ContextWithTraceID(ctx, evt.TraceID)
+	ctx, span := tracing.Start(ctx, "worker.handle", tracing.EventAttrs(evt.EventID, evt.TenantID)...)
+	defer span.End()
+
 	var (
 		ruleHits     []string
 		creditAmount int64

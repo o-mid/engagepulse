@@ -9,6 +9,7 @@ import (
 
 	"github.com/o-mid/engagepulse/internal/domain"
 	"github.com/o-mid/engagepulse/internal/metrics"
+	"github.com/o-mid/engagepulse/internal/tracing"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
@@ -83,10 +84,20 @@ func (c *Consumer) Run(ctx context.Context) error {
 			}
 			continue
 		}
-
-		if err := c.processEvent(ctx, evt); err != nil {
+		if evt.TraceID == "" {
+			for _, h := range msg.Headers {
+				if h.Key == "trace_id" {
+					evt.TraceID = string(h.Value)
+					break
+				}
+			}
+		}
+		msgCtx := tracing.ContextWithTraceID(ctx, evt.TraceID)
+		msgCtx, span := tracing.Start(msgCtx, "kafka.consume", tracing.EventAttrs(evt.EventID, evt.TenantID)...)
+		err = c.processEvent(msgCtx, evt)
+		span.End()
+		if err != nil {
 			c.logger.Error("process event", "event_id", evt.EventID, "err", err)
-			// DLQ publish failed: keep the offset uncommitted so Kafka can redeliver.
 			continue
 		}
 

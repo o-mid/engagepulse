@@ -9,6 +9,7 @@ import (
 	"github.com/o-mid/engagepulse/internal/domain"
 	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/store"
+	"github.com/o-mid/engagepulse/internal/tracing"
 )
 
 type EventPublisher interface {
@@ -82,12 +83,15 @@ func (p *Publisher) flush(ctx context.Context) error {
 			p.logger.Error("outbox unmarshal", "id", row.ID, "err", err)
 			continue
 		}
-		if err := p.kafka.Publish(ctx, evt); err != nil {
-			// Send failed — mark pending again and try on the next loop.
+		pubCtx := tracing.ContextWithTraceID(ctx, evt.TraceID)
+		pubCtx, span := tracing.Start(pubCtx, "outbox.publish", tracing.EventAttrs(evt.EventID, evt.TenantID)...)
+		if err := p.kafka.Publish(pubCtx, evt); err != nil {
+			span.End()
 			_ = p.store.MarkOutboxPublishFailed(ctx, row.ID, err)
 			p.logger.Error("outbox publish", "event_id", evt.EventID, "err", err)
 			continue
 		}
+		span.End()
 		if err := p.store.MarkOutboxPublished(ctx, row.ID); err != nil {
 			return err
 		}
