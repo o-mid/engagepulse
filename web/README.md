@@ -8,7 +8,7 @@ Next.js App Router console for the Go service. HMAC is signed in the BFF. The br
 | --- | --- |
 | `/` | Arena. Dual-tenant stage (`acme-casino` VIP vs `nova-sports` velocity). Ignite runs HMAC, outbox, Kafka, worker tx, then GET player. |
 | `/architecture` | Live counters and the event path. Select a node. Dead letters: last N from Kafka; Redrive is a human-clicked signed ingest of the same event_id. |
-| `/contract` | `make replay` snapshot contract. Tools tab: `ingest` / `get_player` / `get_metrics`. Not tools: `credit` / `set_vip`. Shadow tab: mock vs velocity disagreements. |
+| `/contract` | Run contract: duplicate credit-once, `credit`/`set_vip` 404, Nova cannot read an Acme player, shadow no-write, poison→DLQ when inject is on. Replay / tools / shadow tabs. |
 
 Tab URLs: `/contract?tab=tools`, `/contract?tab=shadow`.
 

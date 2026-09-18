@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import {
   fetchPlayer,
+  getPlayerRaw,
   ingestEvent,
   parseMetrics,
   postTool,
 } from "@/lib/engagepulse";
+import { getTenants } from "@/lib/tenants";
 import { scoreShadowBoard } from "@/lib/shadow-score";
 
 export const dynamic = "force-dynamic";
@@ -130,6 +132,23 @@ export async function POST() {
       };
     }
 
+    const isolationPlayerId = `probe-iso-${suffix}`;
+    await ingestEvent("acme-casino", {
+      event_id: `probe-iso-${suffix}`,
+      player_id: isolationPlayerId,
+      type: "deposit",
+      amount: 50,
+      occurred_at: new Date().toISOString(),
+    });
+    const nova = getTenants()["nova-sports"];
+    const cross = await getPlayerRaw(nova.apiKey, isolationPlayerId);
+    const lower = cross.body.toLowerCase();
+    const isolationPass =
+      cross.status === 404 &&
+      !lower.includes("vip") &&
+      !lower.includes("balance") &&
+      !lower.includes("acme-casino");
+
     return NextResponse.json({
       llm: "The LLM is not on the credit path.",
       hmac: "HMAC is signed in the BFF and verified in Go.",
@@ -155,6 +174,12 @@ export async function POST() {
         pass: shadowPass,
       },
       dlq: dlqProbe,
+      isolation: {
+        player_id: isolationPlayerId,
+        status: cross.status,
+        body_empty: cross.body.trim() === "player not found",
+        pass: isolationPass,
+      },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "contract probe failed";

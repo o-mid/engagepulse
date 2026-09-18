@@ -89,9 +89,15 @@ func TestGetPlayerHidesCrossTenant(t *testing.T) {
 		t.Fatalf("do: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
+	b, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusNotFound {
-		b, _ := io.ReadAll(resp.Body)
 		t.Fatalf("status=%d want 404 body=%s", resp.StatusCode, b)
+	}
+	if json.Valid(b) {
+		t.Fatalf("cross-tenant body is JSON: %s", b)
+	}
+	if bytes.Contains(b, []byte("vip")) || bytes.Contains(b, []byte("balance")) || bytes.Contains(b, []byte("acme-casino")) {
+		t.Fatalf("cross-tenant body leaked snapshot: %s", b)
 	}
 }
 

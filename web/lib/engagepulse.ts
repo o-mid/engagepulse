@@ -31,6 +31,20 @@ export async function fetchPlayer(
   return (await res.json()) as PlayerSnapshot;
 }
 
+export async function getPlayerRaw(
+  apiKey: string,
+  playerId: string,
+): Promise<{ status: number; body: string }> {
+  const res = await fetch(
+    `${apiBase()}/v1/players/${encodeURIComponent(playerId)}`,
+    {
+      headers: { "X-API-Key": apiKey },
+      cache: "no-store",
+    },
+  );
+  return { status: res.status, body: await res.text() };
+}
+
 export async function ingestEvent(
   tenantId: TenantId,
   evt: Omit<EventPayload, "tenant_id"> & { tenant_id?: string },

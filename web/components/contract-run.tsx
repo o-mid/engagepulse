@@ -41,6 +41,12 @@ type Probe = {
     balance: number | null;
     pass: boolean;
   };
+  isolation: {
+    player_id: string;
+    status: number;
+    body_empty: boolean;
+    pass: boolean;
+  };
   error?: string;
 };
 
@@ -72,7 +78,8 @@ export function ContractRun() {
           <CardTitle>Run contract</CardTitle>
           <p className="mt-1 w-full text-pretty break-words text-sm text-muted-foreground">
             Duplicate event_id, 404 on credit/set_vip, sparse-bets vs velocity,
-            and poison retry to DLQ when inject is on.
+            Nova cannot read an Acme player, and poison retry to DLQ when inject
+            is on.
           </p>
         </div>
         <Button
@@ -127,6 +134,13 @@ export function ContractRun() {
               {result.dlq.skipped
                 ? "Inject off. Poison event not sent."
                 : `Poison ${result.dlq.event_id}: retries Δ ${result.dlq.retries_delta}, DLQ Δ ${result.dlq.dlq_delta}. Balance ${result.dlq.balance ?? "—"}.`}
+            </li>
+            <li>
+              <Badge variant={result.isolation.pass ? "success-light" : "destructive-light"}>
+                {result.isolation.pass ? "pass" : "fail"}
+              </Badge>{" "}
+              Nova GET {result.isolation.player_id} → {result.isolation.status}
+              {result.isolation.body_empty ? ", no snapshot" : ""}.
             </li>
           </ul>
         ) : null}
