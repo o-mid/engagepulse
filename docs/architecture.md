@@ -28,7 +28,7 @@ loadgen / partner
    |
    v
 POST /v1/events
-   - check JSON
+   - check JSON (`schema_version` omitted or 1; unknown versions 400)
    - check brand secret (HMAC signature, optional X-Key-Id)
    - save row in outbox table
    - reply 202 Accepted
