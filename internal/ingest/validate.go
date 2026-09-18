@@ -27,6 +27,9 @@ func ValidateEvent(evt domain.Event) error {
 			return fmt.Errorf("amount must be positive for %s", evt.Type)
 		}
 	}
+	if evt.SchemaVersion != 0 && evt.SchemaVersion != domain.EventSchemaV1 {
+		return fmt.Errorf("unsupported schema_version %d", evt.SchemaVersion)
+	}
 	return nil
 }
 

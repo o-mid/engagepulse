@@ -38,6 +38,13 @@ func TestApplyWelcome(t *testing.T) {
 			wantTag: false,
 			credit:  0,
 		},
+		{
+			name:    "heartbeat",
+			evt:     domain.Event{Type: domain.EventSessionHeartbeat, SchemaVersion: domain.EventSchemaV1},
+			st:      store.PlayerState{},
+			wantTag: false,
+			credit:  0,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
