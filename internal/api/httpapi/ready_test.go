@@ -47,8 +47,8 @@ func TestLivezOKWhenReadyFails(t *testing.T) {
 		t.Fatalf("readyz status=%d want 503", resp.StatusCode)
 	}
 	var got struct {
-		OK    bool   `json:"ok"`
 		Error string `json:"error"`
+		OK    bool   `json:"ok"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
 		t.Fatalf("decode: %v", err)
