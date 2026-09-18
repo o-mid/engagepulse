@@ -113,6 +113,7 @@ make demo
 | `make up` | Start Postgres + Redpanda |
 | `make migrate` | Create / update tables (+ seed brands) |
 | `make loadgen` | Send signed events |
+| `make soak` | Local only: unique first deposits plus duplicate deliveries; credits Δ equals unique ids, each balance 100. Do not point at Railway. |
 | `make demo` | Guided end-to-end run |
 | `make replay` | Replay pack vs expected player JSON (needs `DATABASE_URL`) |
 | `make replay-kafka` | Same packs through ingest → outbox → Kafka → consumer (needs Kafka) |
