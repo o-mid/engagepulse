@@ -86,6 +86,95 @@ func (m *memKafka) Publish(_ context.Context, evt domain.Event) error {
 	return nil
 }
 
+func TestReclaimStuckPublishingThenPublishOnce(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	id := uniqueID(t)
+	evt := domain.Event{
+		EventID:    "outbox-reclaim-" + id,
+		TenantID:   "acme-casino",
+		PlayerID:   "outbox-player-reclaim-" + id,
+		Type:       domain.EventDeposit,
+		Amount:     50,
+		OccurredAt: time.Now().UTC(),
+	}
+	if err := st.EnqueueEvent(ctx, evt); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+
+	claimed, err := st.ClaimPendingOutbox(ctx, 100)
+	if err != nil {
+		t.Fatalf("claim: %v", err)
+	}
+	foundClaim := false
+	for _, row := range claimed {
+		if row.EventID == evt.EventID {
+			foundClaim = true
+			if row.Status != store.OutboxPublishing {
+				t.Fatalf("claimed status=%s want publishing", row.Status)
+			}
+		}
+	}
+	if !foundClaim {
+		t.Fatalf("claim missed %s", evt.EventID)
+	}
+
+	stuck, err := st.GetOutbox(ctx, evt.TenantID, evt.EventID)
+	if err != nil {
+		t.Fatalf("get stuck: %v", err)
+	}
+	if stuck.Status != store.OutboxPublishing {
+		t.Fatalf("stuck status=%s want publishing", stuck.Status)
+	}
+
+	if err = st.ReclaimPublishingOutbox(ctx); err != nil {
+		t.Fatalf("reclaim: %v", err)
+	}
+	reclaimed, err := st.GetOutbox(ctx, evt.TenantID, evt.EventID)
+	if err != nil {
+		t.Fatalf("get reclaimed: %v", err)
+	}
+	if reclaimed.Status != store.OutboxPending {
+		t.Fatalf("reclaimed status=%s want pending", reclaimed.Status)
+	}
+	if reclaimed.LastError != "reclaimed stale publish" {
+		t.Fatalf("last_error=%q want reclaimed stale publish", reclaimed.LastError)
+	}
+
+	k := &memKafka{}
+	p := outbox.NewPublisher(st, k, nil)
+	if err = p.FlushOnce(ctx); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+	if n := countPublished(k, evt.EventID); n != 1 {
+		t.Fatalf("published=%d want 1 after reclaim", n)
+	}
+	row, err := st.GetOutbox(ctx, evt.TenantID, evt.EventID)
+	if err != nil {
+		t.Fatalf("get published: %v", err)
+	}
+	if row.Status != store.OutboxPublished {
+		t.Fatalf("status=%s want published", row.Status)
+	}
+
+	if err = p.FlushOnce(ctx); err != nil {
+		t.Fatalf("second flush: %v", err)
+	}
+	if n := countPublished(k, evt.EventID); n != 1 {
+		t.Fatalf("published=%d want 1 after second flush", n)
+	}
+}
+
+func countPublished(k *memKafka, eventID string) int {
+	n := 0
+	for _, published := range k.events {
+		if published.EventID == eventID {
+			n++
+		}
+	}
+	return n
+}
+
 func TestPublisherMarksPublished(t *testing.T) {
 	st := openTestStore(t)
 	ctx := context.Background()
