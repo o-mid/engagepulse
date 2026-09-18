@@ -1,8 +1,9 @@
-.PHONY: build run fmt vet test up down logs migrate seed loadgen demo replay replay-kafka rulepatch shadow
+.PHONY: build run fmt vet test up down logs migrate seed loadgen soak demo replay replay-kafka rulepatch shadow
 
 build:
 	go build -o bin/engagepulse ./cmd/engagepulse
 	go build -o bin/loadgen ./cmd/loadgen
+	go build -o bin/soak ./cmd/soak
 
 run:
 	go run ./cmd/engagepulse
@@ -33,6 +34,9 @@ seed: migrate
 
 loadgen:
 	go run ./cmd/loadgen -n 8
+
+soak:
+	go run ./cmd/soak
 
 demo:
 	bash ./scripts/demo.sh
