@@ -102,7 +102,8 @@ make demo
 | List dead letters | `GET /v1/dlq` (header `X-API-Key`) |
 | Tool call | `POST /v1/tools/{name}` (header `X-API-Key`; `ingest` also `X-Signature`) |
 | Read player (gRPC) | `GetPlayer` (metadata `x-api-key`) |
-| Health | `GET /healthz` |
+| Live | `GET /livez` (process up; `/healthz` is the same) |
+| Ready | `GET /readyz` (Postgres ping + Kafka dial; 503 if either is down) |
 | Counters | `GET /metrics` |
 
 ## Make targets
