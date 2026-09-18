@@ -27,6 +27,7 @@ type DLQLister interface {
 type Server struct {
 	accept EventAccepter
 	dlq    DLQLister
+	ready  func(context.Context) error
 	store  *store.Store
 	logger *slog.Logger
 	mux    *http.ServeMux
@@ -34,7 +35,9 @@ type Server struct {
 
 func New(st *store.Store, accept EventAccepter, logger *slog.Logger) *Server {
 	s := &Server{accept: accept, store: st, logger: logger, mux: http.NewServeMux()}
-	s.mux.HandleFunc("GET /healthz", s.handleHealth)
+	s.mux.HandleFunc("GET /healthz", s.handleLive)
+	s.mux.HandleFunc("GET /livez", s.handleLive)
+	s.mux.HandleFunc("GET /readyz", s.handleReady)
 	s.mux.Handle("GET /metrics", metrics.Handler())
 	s.mux.HandleFunc("POST /v1/events", s.handleIngest)
 	s.mux.HandleFunc("POST /v1/hmac/rotate", s.requireAPIKey(s.handleRotateHMAC))
@@ -48,13 +51,45 @@ func (s *Server) SetDLQ(l DLQLister) {
 	s.dlq = l
 }
 
+func (s *Server) SetReady(fn func(context.Context) error) {
+	s.ready = fn
+}
+
 func (s *Server) Handler() http.Handler {
 	return s.mux
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleLive(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("ok"))
+}
+
+func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if s.store != nil {
+		if err := s.store.Ping(ctx); err != nil {
+			writeReady(w, http.StatusServiceUnavailable, err.Error())
+			return
+		}
+	}
+	if s.ready != nil {
+		if err := s.ready(ctx); err != nil {
+			writeReady(w, http.StatusServiceUnavailable, err.Error())
+			return
+		}
+	}
+	writeReady(w, http.StatusOK, "")
+}
+
+func writeReady(w http.ResponseWriter, status int, errMsg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	body := map[string]any{"ok": status == http.StatusOK}
+	if errMsg != "" {
+		body["error"] = errMsg
+	}
+	_ = json.NewEncoder(w).Encode(body)
 }
 
 func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
