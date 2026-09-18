@@ -45,7 +45,7 @@ export const ARCH_NODES: ArchNode[] = [
     id: "outbox",
     label: "Outbox",
     plain: "Save first",
-    detail: "Postgres outbox row before Kafka — crash-safe accept, then 202.",
+    detail: "Postgres outbox row before Kafka — crash-safe accept, then 202. Rows left publishing after a crash go back to pending and publish once.",
     code: "internal/outbox",
   },
   {
@@ -140,8 +140,8 @@ export function liveReading(
       : "API probe failed.",
     outbox:
       live.outboxPending > 0
-        ? `${live.outboxPending} row(s) waiting to publish.`
-        : "Outbox drained. Publisher caught up.",
+        ? `${live.outboxPending} row(s) waiting to publish (pending or reclaimed mid-send).`
+        : "Outbox drained. Crash reclaim runs before each publish flush.",
     kafka:
       lag > 0
         ? `${lag} accepted event(s) not yet processed.`
