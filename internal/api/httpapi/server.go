@@ -14,6 +14,7 @@ import (
 	"github.com/o-mid/engagepulse/internal/kafka"
 	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/store"
+	"github.com/o-mid/engagepulse/internal/tracing"
 )
 
 type EventAccepter interface {
@@ -138,17 +139,15 @@ func (s *Server) acceptSignedEvent(w http.ResponseWriter, r *http.Request, body 
 		return
 	}
 
+	ctx, span := tracing.Start(r.Context(), "ingest", tracing.EventAttrs(evt.EventID, evt.TenantID)...)
+	defer span.End()
+	evt.TraceID = tracing.TraceID(ctx)
+
 	// 202 = saved in the outbox. Kafka send happens in the background.
-	err = s.accept.EnqueueEvent(r.Context(), evt)
+	err = s.accept.EnqueueEvent(ctx, evt)
 	if errors.Is(err, store.ErrDuplicateEvent) {
-		// Same event_id again — already saved; still return 202.
 		metrics.EventsIngested.Inc()
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"status":   "accepted",
-			"event_id": evt.EventID,
-		})
+		writeAccepted(w, evt)
 		return
 	}
 	if err != nil {
@@ -158,12 +157,7 @@ func (s *Server) acceptSignedEvent(w http.ResponseWriter, r *http.Request, body 
 	}
 
 	metrics.EventsIngested.Inc()
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"status":   "accepted",
-		"event_id": evt.EventID,
-	})
+	writeAccepted(w, evt)
 }
 
 func (s *Server) handleGetPlayer(w http.ResponseWriter, r *http.Request) {
@@ -189,4 +183,16 @@ func (s *Server) handleGetPlayer(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(snap)
+}
+
+func writeAccepted(w http.ResponseWriter, evt domain.Event) {
+	if evt.TraceID != "" {
+		w.Header().Set("X-Trace-Id", evt.TraceID)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"status":   "accepted",
+		"event_id": evt.EventID,
+	})
 }
