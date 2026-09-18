@@ -55,7 +55,7 @@ func main() {
 			Amount:     50,
 			OccurredAt: now,
 		}
-		if err := postEvent(client, *baseURL, *secret, *keyID, evt); err != nil {
+		if err = postEvent(client, *baseURL, *secret, *keyID, evt); err != nil {
 			fail(err)
 		}
 		batch = append(batch, sent{eventID: eventID, playerID: playerID})
@@ -70,7 +70,7 @@ func main() {
 				Amount:     50,
 				OccurredAt: now,
 			}
-			if err := postEvent(client, *baseURL, *secret, *keyID, evt); err != nil {
+			if err = postEvent(client, *baseURL, *secret, *keyID, evt); err != nil {
 				fail(err)
 			}
 		}
@@ -97,7 +97,8 @@ func main() {
 	}
 
 	for _, item := range batch {
-		bal, err := playerBalance(client, *baseURL, *apiKey, item.playerID)
+		var bal int64
+		bal, err = playerBalance(client, *baseURL, *apiKey, item.playerID)
 		if err != nil {
 			fail(err)
 		}
