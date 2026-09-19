@@ -255,7 +255,8 @@ export function PulseTheater() {
                 <div className="min-w-0">
                   <CardTitle id="start-path-heading">Event path</CardTitle>
                   <p className="mt-1 w-full text-pretty break-words text-sm text-muted-foreground">
-                    HMAC sign in the BFF, verify in Go, outbox, Kafka, worker tx.
+                    HMAC in the BFF, verify in Go, outbox, Kafka, worker. DLQ is
+                    the fail branch.
                   </p>
                 </div>
                 <Button asChild variant="link" size="sm" className="h-auto shrink-0 px-0">
