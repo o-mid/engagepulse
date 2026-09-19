@@ -13,3 +13,5 @@ export { RenewIcon } from "./renew";
 export { FlashIcon } from "./flash";
 export { Network4Icon } from "./network-4";
 export { DataTableIcon } from "./data-table";
+export { ArrowRightIcon } from "./arrow-right";
+export { ArrowDownIcon } from "./arrow-down";

@@ -1,11 +1,16 @@
 "use client";
 
 import {
-  ARCH_EDGES,
-  ARCH_NODES,
+  ARCH_BRANCH,
+  ARCH_MAIN,
+  ARCH_ROW_1,
+  ARCH_ROW_2,
+  nodeById,
   type ArchNode,
   type ArchNodeId,
 } from "@/lib/architecture";
+import { ArrowDownIcon, ArrowRightIcon } from "@/components/icons";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -16,33 +21,8 @@ type Props = {
   groupName?: string;
 };
 
-const SLOT: Record<ArchNodeId, string> = {
-  partner: "lg:col-start-1 lg:row-start-1",
-  hmac: "lg:col-start-2 lg:row-start-1",
-  ingest: "lg:col-start-3 lg:row-start-1",
-  outbox: "lg:col-start-4 lg:row-start-1",
-  kafka: "lg:col-start-5 lg:row-start-1",
-  worker: "lg:col-start-1 lg:row-start-2",
-  rules: "lg:col-start-2 lg:row-start-2",
-  ledger: "lg:col-start-3 lg:row-start-2",
-  read: "lg:col-start-4 lg:row-start-2",
-  dlq: "lg:col-start-1 lg:row-start-3",
-};
-
-const COLS = 5;
-const ROWS = 3;
-const SLOT_XY: Record<ArchNodeId, { col: number; row: number }> = {
-  partner: { col: 1, row: 1 },
-  hmac: { col: 2, row: 1 },
-  ingest: { col: 3, row: 1 },
-  outbox: { col: 4, row: 1 },
-  kafka: { col: 5, row: 1 },
-  worker: { col: 1, row: 2 },
-  rules: { col: 2, row: 2 },
-  ledger: { col: 3, row: 2 },
-  read: { col: 4, row: 2 },
-  dlq: { col: 1, row: 3 },
-};
+const PATH_GRID =
+  "lg:grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)_1.5rem_minmax(0,1fr)_1.5rem_minmax(0,1fr)_1.5rem_minmax(0,1fr)]";
 
 export function ArchitectureDiagram({
   selected,
@@ -53,66 +33,224 @@ export function ArchitectureDiagram({
 }: Props) {
   const hot = new Set(hotIds);
   const compact = variant === "compact";
+  const stepOf = new Map(ARCH_MAIN.map((node, i) => [node.id, i + 1]));
+  const wrapLit = hopLit("kafka", "worker", selected, hot);
 
   return (
     <figure className="min-w-0">
-      <figcaption className={compact ? "sr-only" : "mb-3 min-w-0 text-pretty break-words text-sm text-muted-foreground"}>
-        Partner to GET player. HMAC is signed in the BFF and verified in Go.
-        Worker retries three times, then DLQ.
+      <figcaption
+        className={
+          compact
+            ? "sr-only"
+            : "mb-3 min-w-0 text-pretty break-words text-sm text-muted-foreground"
+        }
+      >
+        Happy path 1 to 9. DLQ only after retry ×3.
       </figcaption>
-      <div className={cn("relative min-w-0", compact ? "lg:min-h-[16rem]" : "lg:min-h-[20rem]")}>
-        <svg
-          aria-hidden
-          viewBox="0 0 100 60"
-          preserveAspectRatio="none"
-          className="pointer-events-none absolute inset-0 hidden h-full w-full overflow-visible lg:block"
-        >
-          {ARCH_EDGES.map(([from, to]) => (
-            <polyline
-              key={`${from}-${to}`}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="0.55"
-              className="text-muted-foreground"
-              points={edgePoints(from, to)}
-            />
-          ))}
-        </svg>
-        <ol className="relative grid list-none grid-cols-1 gap-2 p-0 lg:grid-cols-5 lg:grid-rows-3 lg:gap-x-4 lg:gap-y-10">
-          {ARCH_NODES.map((node) => (
-            <li key={node.id} className={cn("min-w-0", SLOT[node.id])}>
+
+      <div className="flex min-w-0 flex-col">
+        <PathRow
+          ids={ARCH_ROW_1}
+          selected={selected}
+          hot={hot}
+          compact={compact}
+          groupName={groupName}
+          stepOf={stepOf}
+          onSelect={onSelect}
+        />
+        <Hop
+          dir="down"
+          lit={wrapLit}
+          className="self-center lg:hidden"
+        />
+        <WrapRail lit={wrapLit} />
+        <p className="sr-only">Then the worker.</p>
+        <PathRow
+          ids={ARCH_ROW_2}
+          selected={selected}
+          hot={hot}
+          compact={compact}
+          groupName={groupName}
+          stepOf={stepOf}
+          onSelect={onSelect}
+        />
+      </div>
+
+      <div
+        className={cn(
+          "mt-2 grid grid-cols-1 lg:mt-3 lg:gap-0",
+          PATH_GRID,
+        )}
+      >
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">After retry ×3</p>
+          <div className="mt-1 flex flex-col items-center gap-1">
+            <Hop dir="down" lit={hopLit("worker", "dlq", selected, hot)} />
+            {ARCH_BRANCH.map((node) => (
               <PathNode
+                key={node.id}
                 node={node}
+                step={null}
                 selected={selected === node.id}
                 hot={hot.has(node.id)}
                 compact={compact}
                 groupName={groupName}
                 onSelect={onSelect}
               />
-            </li>
-          ))}
-        </ol>
+            ))}
+          </div>
+        </div>
       </div>
     </figure>
   );
 }
 
-function edgePoints(from: ArchNodeId, to: ArchNodeId): string {
-  const a = SLOT_XY[from];
-  const b = SLOT_XY[to];
-  const x1 = ((a.col - 0.5) / COLS) * 100;
-  const y1 = ((a.row - 0.5) / ROWS) * 60;
-  const x2 = ((b.col - 0.5) / COLS) * 100;
-  const y2 = ((b.row - 0.5) / ROWS) * 60;
-  if (from === "kafka" && to === "worker") {
-    const midY = (1.5 / ROWS) * 60;
-    return `${x1},${y1} ${x1},${midY} ${x2},${midY} ${x2},${y2}`;
-  }
-  return `${x1},${y1} ${x2},${y2}`;
+function PathRow({
+  ids,
+  selected,
+  hot,
+  compact,
+  groupName,
+  stepOf,
+  onSelect,
+}: {
+  ids: ArchNodeId[];
+  selected: ArchNodeId;
+  hot: Set<ArchNodeId>;
+  compact: boolean;
+  groupName: string;
+  stepOf: Map<ArchNodeId, number>;
+  onSelect: (id: ArchNodeId) => void;
+}) {
+  return (
+    <ol
+      className={cn(
+        "grid list-none grid-cols-1 gap-1 p-0 lg:items-center lg:gap-0",
+        PATH_GRID,
+      )}
+    >
+      {ids.map((id, i) => {
+        const node = nodeById(id);
+        const next = ids[i + 1];
+        return (
+          <li key={id} className="contents">
+            <div className="min-w-0">
+              <PathNode
+                node={node}
+                step={stepOf.get(id) ?? null}
+                selected={selected === id}
+                hot={hot.has(id)}
+                compact={compact}
+                groupName={groupName}
+                onSelect={onSelect}
+              />
+              {next ? (
+                <Hop
+                  dir="down"
+                  lit={hopLit(id, next, selected, hot)}
+                  className="lg:hidden"
+                />
+              ) : null}
+            </div>
+            {next ? (
+              <div
+                aria-hidden
+                className="hidden items-center justify-center lg:flex"
+              >
+                <Hop dir="right" lit={hopLit(id, next, selected, hot)} />
+              </div>
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function WrapRail({ lit }: { lit: boolean }) {
+  const stroke = lit ? "bg-primary" : "bg-muted-foreground";
+  const icon = lit ? "text-primary" : "text-muted-foreground";
+  return (
+    <div
+      aria-hidden
+      className={cn("relative hidden h-14 lg:grid", PATH_GRID)}
+    >
+      <div className="relative">
+        <span className={cn("absolute left-1/2 right-0 top-1/2 h-0.5", stroke)} />
+        <span
+          className={cn(
+            "absolute bottom-1 left-1/2 top-1/2 w-0.5 -translate-x-px",
+            stroke,
+          )}
+        />
+        <ArrowDownIcon
+          className={cn(
+            "absolute bottom-0 left-1/2 size-4 -translate-x-1/2",
+            icon,
+          )}
+        />
+      </div>
+      <div className="relative col-span-7">
+        <span className={cn("absolute inset-x-0 top-1/2 h-0.5", stroke)} />
+      </div>
+      <div className="relative">
+        <span
+          className={cn(
+            "absolute left-1/2 top-1 h-1/2 w-0.5 -translate-x-px",
+            stroke,
+          )}
+        />
+        <span
+          className={cn("absolute left-0 right-1/2 top-1/2 h-0.5", stroke)}
+        />
+        <ArrowDownIcon
+          className={cn(
+            "absolute left-1/2 top-0 size-4 -translate-x-1/2",
+            icon,
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function hopLit(
+  from: ArchNodeId,
+  to: ArchNodeId,
+  selected: ArchNodeId,
+  hot: Set<ArchNodeId>,
+): boolean {
+  return selected === from || selected === to || (hot.has(from) && hot.has(to));
+}
+
+function Hop({
+  dir,
+  lit,
+  className,
+}: {
+  dir: "right" | "down";
+  lit: boolean;
+  className?: string;
+}) {
+  const Icon = dir === "right" ? ArrowRightIcon : ArrowDownIcon;
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex shrink-0 items-center justify-center",
+        dir === "down" && "py-0.5",
+        lit ? "text-primary" : "text-muted-foreground",
+        className,
+      )}
+    >
+      <Icon className="size-4" />
+    </span>
+  );
 }
 
 function PathNode({
   node,
+  step,
   selected,
   hot,
   compact,
@@ -120,6 +258,7 @@ function PathNode({
   onSelect,
 }: {
   node: ArchNode;
+  step: number | null;
   selected: boolean;
   hot: boolean;
   compact: boolean;
@@ -148,13 +287,26 @@ function PathNode({
         onChange={() => onSelect(node.id)}
         className="sr-only"
       />
-      <span className="flex min-w-0 items-baseline justify-between gap-2">
+      <span className="flex min-w-0 items-baseline gap-2">
+        {step != null ? (
+          <Badge
+            variant="outline"
+            size="sm"
+            className="shrink-0 normal-case tracking-normal text-muted-foreground"
+          >
+            {step}
+          </Badge>
+        ) : (
+          <Badge variant="warning-light" size="sm" className="shrink-0">
+            fail
+          </Badge>
+        )}
         <span className="min-w-0 text-sm font-semibold leading-tight">
           {node.label}
         </span>
         {hot ? (
-          <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-[var(--gauge-ok)]">
-            hot
+          <span className="ml-auto shrink-0 text-[10px] font-medium text-[var(--gauge-ok)]">
+            live
           </span>
         ) : null}
       </span>

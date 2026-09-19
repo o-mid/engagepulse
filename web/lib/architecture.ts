@@ -63,14 +63,6 @@ export const ARCH_NODES: ArchNode[] = [
     code: "internal/worker",
   },
   {
-    id: "dlq",
-    label: "DLQ",
-    plain: "Hard fail",
-    detail: "After 3 worker retries, the event is published to player.events.dlq and is not credited. Inspect last N; redrive is a new signed ingest of the same event_id.",
-    code: "player.events.dlq",
-    branch: true,
-  },
-  {
     id: "rules",
     label: "Rules",
     plain: "Decide",
@@ -91,10 +83,26 @@ export const ARCH_NODES: ArchNode[] = [
     detail: "HTTP or gRPC behind X-API-Key. Tools get_player and get_metrics read. They do not credit or set VIP.",
     code: "GET /v1/players/{id}",
   },
+  {
+    id: "dlq",
+    label: "DLQ",
+    plain: "Hard fail",
+    detail: "After 3 worker retries, the event is published to player.events.dlq and is not credited. Inspect last N; redrive is a new signed ingest of the same event_id.",
+    code: "player.events.dlq",
+    branch: true,
+  },
 ];
 
 export const ARCH_MAIN = ARCH_NODES.filter((n) => !n.branch);
 export const ARCH_BRANCH = ARCH_NODES.filter((n) => n.branch);
+export const ARCH_ROW_1: ArchNodeId[] = [
+  "partner",
+  "hmac",
+  "ingest",
+  "outbox",
+  "kafka",
+];
+export const ARCH_ROW_2: ArchNodeId[] = ["worker", "rules", "ledger", "read"];
 
 export const ARCH_EDGES: [ArchNodeId, ArchNodeId][] = [
   ["partner", "hmac"],
