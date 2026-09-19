@@ -73,13 +73,13 @@ func (c *Consumer) Run(ctx context.Context) error {
 		}
 
 		var evt domain.Event
-		if err := json.Unmarshal(msg.Value, &evt); err != nil {
+		if err = json.Unmarshal(msg.Value, &evt); err != nil {
 			c.logger.Error("unmarshal event", "err", err)
 			// Unreadable payloads will never succeed — park a stub in the DLQ and move on.
 			if c.dlq != nil {
 				_ = c.dlq.PublishDLQ(ctx, domain.Event{EventID: "unmarshal"}, err.Error(), 1)
 			}
-			if err := c.reader.CommitMessages(ctx, msg); err != nil {
+			if err = c.reader.CommitMessages(ctx, msg); err != nil {
 				return fmt.Errorf("commit poison message: %w", err)
 			}
 			continue
@@ -101,7 +101,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 			continue
 		}
 
-		if err := c.reader.CommitMessages(ctx, msg); err != nil {
+		if err = c.reader.CommitMessages(ctx, msg); err != nil {
 			return fmt.Errorf("commit message: %w", err)
 		}
 	}
