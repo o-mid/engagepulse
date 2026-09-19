@@ -21,6 +21,9 @@ type Props = {
   groupName?: string;
 };
 
+const PATH_GRID =
+  "lg:grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)_1.5rem_minmax(0,1fr)_1.5rem_minmax(0,1fr)_1.5rem_minmax(0,1fr)]";
+
 export function ArchitectureDiagram({
   selected,
   onSelect,
@@ -31,6 +34,7 @@ export function ArchitectureDiagram({
   const hot = new Set(hotIds);
   const compact = variant === "compact";
   const stepOf = new Map(ARCH_MAIN.map((node, i) => [node.id, i + 1]));
+  const wrapLit = hopLit("kafka", "worker", selected, hot);
 
   return (
     <figure className="min-w-0">
@@ -41,11 +45,10 @@ export function ArchitectureDiagram({
             : "mb-3 min-w-0 text-pretty break-words text-sm text-muted-foreground"
         }
       >
-        Happy path left to right, then worker. DLQ is the fail branch after
-        retry ×3.
+        Happy path 1 to 9. DLQ only after retry ×3.
       </figcaption>
 
-      <div className="flex min-w-0 flex-col gap-1 lg:gap-2">
+      <div className="flex min-w-0 flex-col">
         <PathRow
           ids={ARCH_ROW_1}
           selected={selected}
@@ -55,25 +58,13 @@ export function ArchitectureDiagram({
           stepOf={stepOf}
           onSelect={onSelect}
         />
-        <div className="flex justify-center lg:grid lg:grid-cols-5">
-          <p className="col-start-5 hidden items-center justify-center gap-1 text-xs text-muted-foreground lg:flex">
-            <ArrowDownIcon
-              className={cn(
-                "size-4",
-                hopLit("kafka", "worker", selected, hot)
-                  ? "text-primary"
-                  : "text-muted-foreground",
-              )}
-              aria-hidden
-            />
-            then worker
-          </p>
-          <Hop
-            dir="down"
-            lit={hopLit("kafka", "worker", selected, hot)}
-            className="lg:hidden"
-          />
-        </div>
+        <Hop
+          dir="down"
+          lit={wrapLit}
+          className="self-center lg:hidden"
+        />
+        <WrapRail lit={wrapLit} />
+        <p className="sr-only">Then the worker.</p>
         <PathRow
           ids={ARCH_ROW_2}
           selected={selected}
@@ -85,28 +76,29 @@ export function ArchitectureDiagram({
         />
       </div>
 
-      <div className="mt-4 max-w-sm border-t border-border pt-3 lg:w-1/5 lg:max-w-none">
-        <p className="text-xs text-muted-foreground">
-          Fail from worker after retry ×3
-        </p>
-        <div className="mt-2 flex items-center gap-2">
-          <Hop
-            dir="down"
-            lit={hopLit("worker", "dlq", selected, hot)}
-            className="shrink-0"
-          />
-          {ARCH_BRANCH.map((node) => (
-            <PathNode
-              key={node.id}
-              node={node}
-              step={null}
-              selected={selected === node.id}
-              hot={hot.has(node.id)}
-              compact={compact}
-              groupName={groupName}
-              onSelect={onSelect}
-            />
-          ))}
+      <div
+        className={cn(
+          "mt-2 grid grid-cols-1 lg:mt-3 lg:gap-0",
+          PATH_GRID,
+        )}
+      >
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">After retry ×3</p>
+          <div className="mt-1 flex flex-col items-center gap-1">
+            <Hop dir="down" lit={hopLit("worker", "dlq", selected, hot)} />
+            {ARCH_BRANCH.map((node) => (
+              <PathNode
+                key={node.id}
+                node={node}
+                step={null}
+                selected={selected === node.id}
+                hot={hot.has(node.id)}
+                compact={compact}
+                groupName={groupName}
+                onSelect={onSelect}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </figure>
@@ -131,39 +123,94 @@ function PathRow({
   onSelect: (id: ArchNodeId) => void;
 }) {
   return (
-    <ol className="grid list-none grid-cols-1 gap-1 p-0 lg:grid-cols-5 lg:items-center lg:gap-x-3 lg:gap-y-0">
+    <ol
+      className={cn(
+        "grid list-none grid-cols-1 gap-1 p-0 lg:items-center lg:gap-0",
+        PATH_GRID,
+      )}
+    >
       {ids.map((id, i) => {
         const node = nodeById(id);
         const next = ids[i + 1];
         return (
-          <li key={id} className="relative flex min-w-0 flex-col gap-1">
-            <PathNode
-              node={node}
-              step={stepOf.get(id) ?? null}
-              selected={selected === id}
-              hot={hot.has(id)}
-              compact={compact}
-              groupName={groupName}
-              onSelect={onSelect}
-            />
-            {next ? (
-              <>
+          <li key={id} className="contents">
+            <div className="min-w-0">
+              <PathNode
+                node={node}
+                step={stepOf.get(id) ?? null}
+                selected={selected === id}
+                hot={hot.has(id)}
+                compact={compact}
+                groupName={groupName}
+                onSelect={onSelect}
+              />
+              {next ? (
                 <Hop
                   dir="down"
                   lit={hopLit(id, next, selected, hot)}
                   className="lg:hidden"
                 />
-                <Hop
-                  dir="right"
-                  lit={hopLit(id, next, selected, hot)}
-                  className="absolute -right-3 top-1/2 z-10 hidden -translate-y-1/2 translate-x-1/2 lg:flex"
-                />
-              </>
+              ) : null}
+            </div>
+            {next ? (
+              <div
+                aria-hidden
+                className="hidden items-center justify-center lg:flex"
+              >
+                <Hop dir="right" lit={hopLit(id, next, selected, hot)} />
+              </div>
             ) : null}
           </li>
         );
       })}
     </ol>
+  );
+}
+
+function WrapRail({ lit }: { lit: boolean }) {
+  const stroke = lit ? "bg-primary" : "bg-muted-foreground";
+  const icon = lit ? "text-primary" : "text-muted-foreground";
+  return (
+    <div
+      aria-hidden
+      className={cn("relative hidden h-14 lg:grid", PATH_GRID)}
+    >
+      <div className="relative">
+        <span className={cn("absolute left-1/2 right-0 top-1/2 h-0.5", stroke)} />
+        <span
+          className={cn(
+            "absolute bottom-1 left-1/2 top-1/2 w-0.5 -translate-x-px",
+            stroke,
+          )}
+        />
+        <ArrowDownIcon
+          className={cn(
+            "absolute bottom-0 left-1/2 size-4 -translate-x-1/2",
+            icon,
+          )}
+        />
+      </div>
+      <div className="relative col-span-7">
+        <span className={cn("absolute inset-x-0 top-1/2 h-0.5", stroke)} />
+      </div>
+      <div className="relative">
+        <span
+          className={cn(
+            "absolute left-1/2 top-1 h-1/2 w-0.5 -translate-x-px",
+            stroke,
+          )}
+        />
+        <span
+          className={cn("absolute left-0 right-1/2 top-1/2 h-0.5", stroke)}
+        />
+        <ArrowDownIcon
+          className={cn(
+            "absolute left-1/2 top-0 size-4 -translate-x-1/2",
+            icon,
+          )}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -245,7 +292,7 @@ function PathNode({
           <Badge
             variant="outline"
             size="sm"
-            className="shrink-0 normal-case tracking-normal"
+            className="shrink-0 normal-case tracking-normal text-muted-foreground"
           >
             {step}
           </Badge>
@@ -258,8 +305,8 @@ function PathNode({
           {node.label}
         </span>
         {hot ? (
-          <span className="ml-auto shrink-0 text-[10px] font-medium uppercase tracking-wide text-[var(--gauge-ok)]">
-            hot
+          <span className="ml-auto shrink-0 text-[10px] font-medium text-[var(--gauge-ok)]">
+            live
           </span>
         ) : null}
       </span>
