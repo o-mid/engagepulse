@@ -40,6 +40,9 @@ func (p *Producer) Publish(ctx context.Context, evt domain.Event) error {
 		Value: payload,
 		Time:  time.Now().UTC(),
 	}
+	if evt.TraceID != "" {
+		msg.Headers = []kafkago.Header{{Key: "trace_id", Value: []byte(evt.TraceID)}}
+	}
 	if err := p.writer.WriteMessages(ctx, msg); err != nil {
 		return fmt.Errorf("write kafka message: %w", err)
 	}

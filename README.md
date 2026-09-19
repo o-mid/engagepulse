@@ -96,7 +96,7 @@ make demo
 
 | What | Path |
 | --- | --- |
-| Send event | `POST /v1/events` (header `X-Signature`, optional `X-Key-Id`; `schema_version` omitted or `1`) |
+| Send event | `POST /v1/events` (header `X-Signature`, optional `X-Key-Id`; `schema_version` omitted or `1`; response `X-Trace-Id`) |
 | Rotate HMAC | `POST /v1/hmac/rotate` (header `X-API-Key`; overlap for that brand only) |
 | Read player | `GET /v1/players/{id}` (header `X-API-Key`) |
 | List dead letters | `GET /v1/dlq` (header `X-API-Key`) |

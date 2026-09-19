@@ -30,7 +30,7 @@ loadgen / partner
 POST /v1/events
    - check JSON (`schema_version` omitted or 1; unknown versions 400)
    - check brand secret (HMAC signature, optional X-Key-Id)
-   - save row in outbox table
+   - save row in outbox table (response `X-Trace-Id` is the OpenTelemetry trace)
    - reply 202 Accepted
    |
    v

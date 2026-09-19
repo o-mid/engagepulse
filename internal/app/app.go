@@ -20,6 +20,7 @@ import (
 	"github.com/o-mid/engagepulse/internal/metrics"
 	"github.com/o-mid/engagepulse/internal/outbox"
 	"github.com/o-mid/engagepulse/internal/store"
+	"github.com/o-mid/engagepulse/internal/tracing"
 	"github.com/o-mid/engagepulse/internal/worker"
 )
 
@@ -44,6 +45,12 @@ func New(cfg config.Config) *App {
 }
 
 func (a *App) Run(ctx context.Context) error {
+	tp, err := tracing.Setup()
+	if err != nil {
+		return fmt.Errorf("tracing: %w", err)
+	}
+	defer func() { _ = tp.Shutdown(context.Background()) }()
+
 	st, err := store.Open(ctx, a.cfg.DatabaseURL)
 	if err != nil {
 		return err

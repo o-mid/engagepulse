@@ -9,6 +9,7 @@ import (
 
 	"github.com/o-mid/engagepulse/internal/domain"
 	"github.com/o-mid/engagepulse/internal/metrics"
+	"github.com/o-mid/engagepulse/internal/tracing"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
@@ -72,25 +73,35 @@ func (c *Consumer) Run(ctx context.Context) error {
 		}
 
 		var evt domain.Event
-		if err := json.Unmarshal(msg.Value, &evt); err != nil {
+		if err = json.Unmarshal(msg.Value, &evt); err != nil {
 			c.logger.Error("unmarshal event", "err", err)
 			// Unreadable payloads will never succeed — park a stub in the DLQ and move on.
 			if c.dlq != nil {
 				_ = c.dlq.PublishDLQ(ctx, domain.Event{EventID: "unmarshal"}, err.Error(), 1)
 			}
-			if err := c.reader.CommitMessages(ctx, msg); err != nil {
+			if err = c.reader.CommitMessages(ctx, msg); err != nil {
 				return fmt.Errorf("commit poison message: %w", err)
 			}
 			continue
 		}
-
-		if err := c.processEvent(ctx, evt); err != nil {
+		if evt.TraceID == "" {
+			for _, h := range msg.Headers {
+				if h.Key == "trace_id" {
+					evt.TraceID = string(h.Value)
+					break
+				}
+			}
+		}
+		msgCtx := tracing.ContextWithTraceID(ctx, evt.TraceID)
+		msgCtx, span := tracing.Start(msgCtx, "kafka.consume", tracing.EventAttrs(evt.EventID, evt.TenantID)...)
+		err = c.processEvent(msgCtx, evt)
+		span.End()
+		if err != nil {
 			c.logger.Error("process event", "event_id", evt.EventID, "err", err)
-			// DLQ publish failed: keep the offset uncommitted so Kafka can redeliver.
 			continue
 		}
 
-		if err := c.reader.CommitMessages(ctx, msg); err != nil {
+		if err = c.reader.CommitMessages(ctx, msg); err != nil {
 			return fmt.Errorf("commit message: %w", err)
 		}
 	}

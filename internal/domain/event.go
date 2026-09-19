@@ -15,6 +15,7 @@ type Event struct {
 	TenantID      string    `json:"tenant_id"`
 	PlayerID      string    `json:"player_id"`
 	Type          string    `json:"type"`
+	TraceID       string    `json:"trace_id,omitempty"`
 	Amount        int64     `json:"amount,omitempty"`
 	SchemaVersion int       `json:"schema_version,omitempty"`
 }
