@@ -1,11 +1,16 @@
 "use client";
 
 import {
-  ARCH_EDGES,
-  ARCH_NODES,
+  ARCH_BRANCH,
+  ARCH_MAIN,
+  ARCH_ROW_1,
+  ARCH_ROW_2,
+  nodeById,
   type ArchNode,
   type ArchNodeId,
 } from "@/lib/architecture";
+import { ArrowDownIcon, ArrowRightIcon } from "@/components/icons";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -14,34 +19,6 @@ type Props = {
   hotIds: ArchNodeId[];
   variant?: "full" | "compact";
   groupName?: string;
-};
-
-const SLOT: Record<ArchNodeId, string> = {
-  partner: "lg:col-start-1 lg:row-start-1",
-  hmac: "lg:col-start-2 lg:row-start-1",
-  ingest: "lg:col-start-3 lg:row-start-1",
-  outbox: "lg:col-start-4 lg:row-start-1",
-  kafka: "lg:col-start-5 lg:row-start-1",
-  worker: "lg:col-start-1 lg:row-start-2",
-  rules: "lg:col-start-2 lg:row-start-2",
-  ledger: "lg:col-start-3 lg:row-start-2",
-  read: "lg:col-start-4 lg:row-start-2",
-  dlq: "lg:col-start-1 lg:row-start-3",
-};
-
-const COLS = 5;
-const ROWS = 3;
-const SLOT_XY: Record<ArchNodeId, { col: number; row: number }> = {
-  partner: { col: 1, row: 1 },
-  hmac: { col: 2, row: 1 },
-  ingest: { col: 3, row: 1 },
-  outbox: { col: 4, row: 1 },
-  kafka: { col: 5, row: 1 },
-  worker: { col: 1, row: 2 },
-  rules: { col: 2, row: 2 },
-  ledger: { col: 3, row: 2 },
-  read: { col: 4, row: 2 },
-  dlq: { col: 1, row: 3 },
 };
 
 export function ArchitectureDiagram({
@@ -53,66 +30,180 @@ export function ArchitectureDiagram({
 }: Props) {
   const hot = new Set(hotIds);
   const compact = variant === "compact";
+  const stepOf = new Map(ARCH_MAIN.map((node, i) => [node.id, i + 1]));
 
   return (
     <figure className="min-w-0">
-      <figcaption className={compact ? "sr-only" : "mb-3 min-w-0 text-pretty break-words text-sm text-muted-foreground"}>
-        Partner to GET player. HMAC is signed in the BFF and verified in Go.
-        Worker retries three times, then DLQ.
+      <figcaption
+        className={
+          compact
+            ? "sr-only"
+            : "mb-3 min-w-0 text-pretty break-words text-sm text-muted-foreground"
+        }
+      >
+        Happy path left to right, then worker. DLQ is the fail branch after
+        retry ×3.
       </figcaption>
-      <div className={cn("relative min-w-0", compact ? "lg:min-h-[16rem]" : "lg:min-h-[20rem]")}>
-        <svg
-          aria-hidden
-          viewBox="0 0 100 60"
-          preserveAspectRatio="none"
-          className="pointer-events-none absolute inset-0 hidden h-full w-full overflow-visible lg:block"
-        >
-          {ARCH_EDGES.map(([from, to]) => (
-            <polyline
-              key={`${from}-${to}`}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="0.55"
-              className="text-muted-foreground"
-              points={edgePoints(from, to)}
+
+      <div className="flex min-w-0 flex-col gap-1 lg:gap-2">
+        <PathRow
+          ids={ARCH_ROW_1}
+          selected={selected}
+          hot={hot}
+          compact={compact}
+          groupName={groupName}
+          stepOf={stepOf}
+          onSelect={onSelect}
+        />
+        <div className="flex justify-center lg:grid lg:grid-cols-5">
+          <p className="col-start-5 hidden items-center justify-center gap-1 text-xs text-muted-foreground lg:flex">
+            <ArrowDownIcon
+              className={cn(
+                "size-4",
+                hopLit("kafka", "worker", selected, hot)
+                  ? "text-primary"
+                  : "text-muted-foreground",
+              )}
+              aria-hidden
+            />
+            then worker
+          </p>
+          <Hop
+            dir="down"
+            lit={hopLit("kafka", "worker", selected, hot)}
+            className="lg:hidden"
+          />
+        </div>
+        <PathRow
+          ids={ARCH_ROW_2}
+          selected={selected}
+          hot={hot}
+          compact={compact}
+          groupName={groupName}
+          stepOf={stepOf}
+          onSelect={onSelect}
+        />
+      </div>
+
+      <div className="mt-4 max-w-sm border-t border-border pt-3 lg:w-1/5 lg:max-w-none">
+        <p className="text-xs text-muted-foreground">
+          Fail from worker after retry ×3
+        </p>
+        <div className="mt-2 flex items-center gap-2">
+          <Hop
+            dir="down"
+            lit={hopLit("worker", "dlq", selected, hot)}
+            className="shrink-0"
+          />
+          {ARCH_BRANCH.map((node) => (
+            <PathNode
+              key={node.id}
+              node={node}
+              step={null}
+              selected={selected === node.id}
+              hot={hot.has(node.id)}
+              compact={compact}
+              groupName={groupName}
+              onSelect={onSelect}
             />
           ))}
-        </svg>
-        <ol className="relative grid list-none grid-cols-1 gap-2 p-0 lg:grid-cols-5 lg:grid-rows-3 lg:gap-x-4 lg:gap-y-10">
-          {ARCH_NODES.map((node) => (
-            <li key={node.id} className={cn("min-w-0", SLOT[node.id])}>
-              <PathNode
-                node={node}
-                selected={selected === node.id}
-                hot={hot.has(node.id)}
-                compact={compact}
-                groupName={groupName}
-                onSelect={onSelect}
-              />
-            </li>
-          ))}
-        </ol>
+        </div>
       </div>
     </figure>
   );
 }
 
-function edgePoints(from: ArchNodeId, to: ArchNodeId): string {
-  const a = SLOT_XY[from];
-  const b = SLOT_XY[to];
-  const x1 = ((a.col - 0.5) / COLS) * 100;
-  const y1 = ((a.row - 0.5) / ROWS) * 60;
-  const x2 = ((b.col - 0.5) / COLS) * 100;
-  const y2 = ((b.row - 0.5) / ROWS) * 60;
-  if (from === "kafka" && to === "worker") {
-    const midY = (1.5 / ROWS) * 60;
-    return `${x1},${y1} ${x1},${midY} ${x2},${midY} ${x2},${y2}`;
-  }
-  return `${x1},${y1} ${x2},${y2}`;
+function PathRow({
+  ids,
+  selected,
+  hot,
+  compact,
+  groupName,
+  stepOf,
+  onSelect,
+}: {
+  ids: ArchNodeId[];
+  selected: ArchNodeId;
+  hot: Set<ArchNodeId>;
+  compact: boolean;
+  groupName: string;
+  stepOf: Map<ArchNodeId, number>;
+  onSelect: (id: ArchNodeId) => void;
+}) {
+  return (
+    <ol className="grid list-none grid-cols-1 gap-1 p-0 lg:grid-cols-5 lg:items-center lg:gap-x-3 lg:gap-y-0">
+      {ids.map((id, i) => {
+        const node = nodeById(id);
+        const next = ids[i + 1];
+        return (
+          <li key={id} className="relative flex min-w-0 flex-col gap-1">
+            <PathNode
+              node={node}
+              step={stepOf.get(id) ?? null}
+              selected={selected === id}
+              hot={hot.has(id)}
+              compact={compact}
+              groupName={groupName}
+              onSelect={onSelect}
+            />
+            {next ? (
+              <>
+                <Hop
+                  dir="down"
+                  lit={hopLit(id, next, selected, hot)}
+                  className="lg:hidden"
+                />
+                <Hop
+                  dir="right"
+                  lit={hopLit(id, next, selected, hot)}
+                  className="absolute -right-3 top-1/2 z-10 hidden -translate-y-1/2 translate-x-1/2 lg:flex"
+                />
+              </>
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function hopLit(
+  from: ArchNodeId,
+  to: ArchNodeId,
+  selected: ArchNodeId,
+  hot: Set<ArchNodeId>,
+): boolean {
+  return selected === from || selected === to || (hot.has(from) && hot.has(to));
+}
+
+function Hop({
+  dir,
+  lit,
+  className,
+}: {
+  dir: "right" | "down";
+  lit: boolean;
+  className?: string;
+}) {
+  const Icon = dir === "right" ? ArrowRightIcon : ArrowDownIcon;
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex shrink-0 items-center justify-center",
+        dir === "down" && "py-0.5",
+        lit ? "text-primary" : "text-muted-foreground",
+        className,
+      )}
+    >
+      <Icon className="size-4" />
+    </span>
+  );
 }
 
 function PathNode({
   node,
+  step,
   selected,
   hot,
   compact,
@@ -120,6 +211,7 @@ function PathNode({
   onSelect,
 }: {
   node: ArchNode;
+  step: number | null;
   selected: boolean;
   hot: boolean;
   compact: boolean;
@@ -148,12 +240,25 @@ function PathNode({
         onChange={() => onSelect(node.id)}
         className="sr-only"
       />
-      <span className="flex min-w-0 items-baseline justify-between gap-2">
+      <span className="flex min-w-0 items-baseline gap-2">
+        {step != null ? (
+          <Badge
+            variant="outline"
+            size="sm"
+            className="shrink-0 normal-case tracking-normal"
+          >
+            {step}
+          </Badge>
+        ) : (
+          <Badge variant="warning-light" size="sm" className="shrink-0">
+            fail
+          </Badge>
+        )}
         <span className="min-w-0 text-sm font-semibold leading-tight">
           {node.label}
         </span>
         {hot ? (
-          <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-[var(--gauge-ok)]">
+          <span className="ml-auto shrink-0 text-[10px] font-medium uppercase tracking-wide text-[var(--gauge-ok)]">
             hot
           </span>
         ) : null}
