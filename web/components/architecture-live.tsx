@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArchitectureDiagram } from "@/components/architecture-diagram";
 import { DlqInspect } from "@/components/dlq-inspect";
 import { Network4Icon } from "@/components/icons/network-4";
@@ -13,6 +14,7 @@ import { liveReading, nodeById, type ArchNodeId } from "@/lib/architecture";
 import { useLiveArchitecture } from "@/lib/use-live-architecture";
 
 export function ArchitectureLive() {
+  const reduce = useReducedMotion();
   const [selected, setSelected] = useState<ArchNodeId>("ingest");
   const { live, hotIds, error, lag, offline, refresh } = useLiveArchitecture();
   const selectedNode = nodeById(selected);
@@ -69,14 +71,31 @@ export function ArchitectureLive() {
             <CardTitle>{selectedNode.label}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">{selectedNode.plain}</p>
-            <p className="text-sm leading-relaxed text-foreground">
-              {selectedNode.detail}
-            </p>
-            <p className="rounded-md border border-border bg-input px-3 py-2 font-mono text-xs text-primary">
-              {selectedNode.code}
-            </p>
-            <p className="text-sm leading-relaxed text-muted-foreground">{reading}</p>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={selected}
+                initial={reduce ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduce ? undefined : { opacity: 0 }}
+                transition={
+                  reduce
+                    ? { duration: 0 }
+                    : { duration: 0.2, ease: [0.215, 0.61, 0.355, 1] }
+                }
+                className="space-y-3"
+              >
+                <p className="text-sm text-muted-foreground">{selectedNode.plain}</p>
+                <p className="text-sm leading-relaxed text-foreground">
+                  {selectedNode.detail}
+                </p>
+                <p className="rounded-md border border-border bg-input px-3 py-2 font-mono text-xs text-primary">
+                  {selectedNode.code}
+                </p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {reading}
+                </p>
+              </motion.div>
+            </AnimatePresence>
             {error && live && !live.ok ? (
               <p className="text-sm text-destructive">{error}</p>
             ) : null}

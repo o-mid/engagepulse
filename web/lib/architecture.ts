@@ -29,14 +29,14 @@ export const ARCH_NODES: ArchNode[] = [
   },
   {
     id: "hmac",
-    label: "HMAC sign",
-    plain: "BFF",
+    label: "Sign",
+    plain: "BFF HMAC",
     detail: "The Next.js BFF hex HMAC-SHA256s the raw body and sends X-Key-Id. The browser never holds the secret.",
     code: "web/lib/hmac.ts",
   },
   {
     id: "ingest",
-    label: "HMAC verify",
+    label: "Verify",
     plain: "Go ingest",
     detail: "internal/ingest checks X-Signature against the raw body bytes and X-Key-Id against live keys, then accepts. POST /v1/tools/ingest is the same path with an API key.",
     code: "POST /v1/events",
@@ -57,7 +57,7 @@ export const ARCH_NODES: ArchNode[] = [
   },
   {
     id: "worker",
-    label: "Worker tx",
+    label: "Worker",
     plain: "Retry ×3",
     detail: "Dedupe by event_id, then one tx: mark processed, write state, credit. Handler retries up to 3×, then DLQ.",
     code: "internal/worker",
@@ -78,8 +78,8 @@ export const ARCH_NODES: ArchNode[] = [
   },
   {
     id: "read",
-    label: "GET player",
-    plain: "Snapshot",
+    label: "Player",
+    plain: "Read",
     detail: "HTTP or gRPC behind X-API-Key. Tools get_player and get_metrics read. They do not credit or set VIP.",
     code: "GET /v1/players/{id}",
   },
@@ -103,6 +103,12 @@ export const ARCH_ROW_1: ArchNodeId[] = [
   "kafka",
 ];
 export const ARCH_ROW_2: ArchNodeId[] = ["worker", "rules", "ledger", "read"];
+
+export const ARCH_STAGES: { id: "accept" | "apply"; label: string; ids: ArchNodeId[] }[] =
+  [
+    { id: "accept", label: "Sign and accept", ids: ARCH_ROW_1 },
+    { id: "apply", label: "Apply and read", ids: ARCH_ROW_2 },
+  ];
 
 export const ARCH_EDGES: [ArchNodeId, ArchNodeId][] = [
   ["partner", "hmac"],

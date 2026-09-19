@@ -255,7 +255,7 @@ export function PulseTheater() {
                 <div className="min-w-0">
                   <CardTitle id="start-path-heading">Event path</CardTitle>
                   <p className="mt-1 w-full text-pretty break-words text-sm text-muted-foreground">
-                    HMAC, outbox, Kafka, worker. DLQ is off this path.
+                    Sign in the BFF, verify in Go. DLQ is off this path.
                   </p>
                 </div>
                 <Button asChild variant="link" size="sm" className="h-auto shrink-0 px-0">
@@ -271,7 +271,10 @@ export function PulseTheater() {
                 variant="compact"
                 groupName="start-event-path"
               />
-              <p className="mt-3 text-pretty text-sm text-muted-foreground">
+              <p
+                className="mt-3 text-pretty text-sm text-muted-foreground"
+                aria-live="polite"
+              >
                 {pathReading}
               </p>
             </CardContent>

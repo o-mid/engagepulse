@@ -240,8 +240,51 @@ input {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .arch-node[data-hot="true"]:not([data-selected="true"]) {
-    box-shadow: 0 0 0 1px var(--gauge-ok), var(--shadow-nested);
+  .path-hop-flow-x,
+  .path-hop-flow-y {
+    pointer-events: none;
+    position: absolute;
+    background: linear-gradient(
+      var(--path-flow-angle, 90deg),
+      transparent,
+      var(--primary),
+      transparent
+    );
+    opacity: 0.9;
+  }
+
+  .path-hop-flow-x {
+    --path-flow-angle: 90deg;
+    inset-block: calc(50% - 1px);
+    inset-inline: 0;
+    height: 2px;
+    animation: path-hop-flow-x 1.1s linear infinite;
+  }
+
+  .path-hop-flow-y {
+    --path-flow-angle: 180deg;
+    inset-inline: calc(50% - 1px);
+    inset-block: 0;
+    width: 2px;
+    animation: path-hop-flow-y 1.1s linear infinite;
+  }
+
+  @keyframes path-hop-flow-x {
+    from {
+      transform: translateX(-70%);
+    }
+    to {
+      transform: translateX(70%);
+    }
+  }
+
+  @keyframes path-hop-flow-y {
+    from {
+      transform: translateY(-70%);
+    }
+    to {
+      transform: translateY(70%);
+    }
   }
 }
 
